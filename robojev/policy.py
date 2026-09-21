@@ -67,7 +67,7 @@ ACTION_DIM = 7
 #: the older one keeps a checkpoint trained before the rename loadable; only the new one is
 #: written (`robojev.train.CHECKPOINT_META`).
 CHECKPOINT_META = "robojev.json"
-LEGACY_CHECKPOINT_META = "robopp.json"
+LEGACY_CHECKPOINT_META = "robopp.json"  # the name earlier checkpoints were written with
 
 #: Upstream's own default and the only precision the released checkpoints were run at.
 PRECISION = "bf16"

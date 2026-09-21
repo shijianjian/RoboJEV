@@ -1,7 +1,7 @@
 # RoboJEV
 
-Code plans and the model judges: a
-scripted plan executor proposes a waypoint, a tracker prints the scene and the plan as text, and
+A small language model that controls a robot arm by answering ten short questions about a
+text description of the scene. Code plans and the model judges: a scripted plan executor proposes a waypoint, a tracker prints the scene and the plan as text, and
 one forward pass answers `move_x/y/z`, `size_x/y/z`, `yaw`, `rim`, `grip` and `subgoal`, which
 compose into one action. The model is a NanoJev-style parallel decision model — a Qwen3-0.6B
 backbone with a set head per question, fine-tuned by NanoJev's own trainer.
