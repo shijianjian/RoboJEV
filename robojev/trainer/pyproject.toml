@@ -1,0 +1,22 @@
+[project]
+name = "robojev-trainer"
+version = "0.1.0"
+description = "Isolated environment for the RoboJEV fine-tune: NanoJev's trainer and predictor"
+# NanoJev wants "3.11 or newer" and its recorded run is on 3.14.4; its requirements-toy.txt pins
+# torch 2.14.0 / transformers 5.17.0 / safetensors 0.8.0 / numpy 2.5.3, and
+# `--disable-native-triton` reaches into `torch._native.triton_utils`, which exists only in
+# torch 2.14. That combination is mutually exclusive with LIBERO's (3.10 / torch 2.2), which is
+# why this is an environment of its own rather than an extra of the package.
+requires-python = "==3.14.*"
+dependencies = [
+    "torch==2.14.0",
+    "transformers==5.17.0",
+    "safetensors==0.8.0",
+    "numpy==2.5.3",
+    # transformers' offline loader wants the package present, and NanoJev's predictor sets
+    # HF_HUB_OFFLINE itself.
+    "huggingface-hub",
+    # Not used by the trainer. It is in the resolved uv.lock, so removing it here would
+    # invalidate `uv sync --frozen`; it goes out the next time the pins are re-locked.
+    "msgpack>=1.0",
+]

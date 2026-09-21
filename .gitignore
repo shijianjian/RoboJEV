@@ -1,0 +1,38 @@
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+/build/
+/dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# virtual environments (never inside the repo, but do not commit one if somebody makes one)
+.venv/
+venv/
+/env/
+.uv/
+
+# node
+node_modules/
+web/dist/
+web/.vite/
+*.tsbuildinfo
+npm-debug.log*
+
+# Runtime output: weights, harvests, DAgger rounds, scene caches, recordings. Anchored at the
+# root on purpose -- an unanchored `data/` also matches `web/src/data/`, which is source.
+/checkpoints/
+/data/
+/runs/
+/harvest*/
+/dagger*/
+*.safetensors
+*.jsonl
+!web/public/**/*.jsonl
+
+# editors and OS
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,7 @@
+{
+  "url": "https://github.com/TianyuCodings/NanoJev",
+  "commit": "71a513bb0163b5634467842b523ee0c0ed6fb1c7",
+  "subdir": "scripts",
+  "license": "MIT",
+  "note": "Not a Python package: scripts/ is a flat directory of sibling modules importing each other by bare name, and DecisionModel is loaded by file path (predict_toy_decisions.py:165-173). Put scripts/ on sys.path and `import predict_toy_decisions`."
+}

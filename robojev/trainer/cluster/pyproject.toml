@@ -1,0 +1,36 @@
+[project]
+# The same environment as `../pyproject.toml`, resolved for a CUDA **12** driver.
+#
+# Why a second project at all: the parent `uv.lock` resolves `torch==2.14.0` from plain PyPI,
+# which is the CUDA 13 build (`nvidia-cudnn-cu13`, `nvidia-nccl-cu13`). CUDA 13.x wants an r580+
+# driver, and many GPU clusters are still on r570 / CUDA 12.8, where `torch.cuda.init()` fails.
+# PyTorch publishes the *same version* for cp314 on its cu126 index, and CUDA 12.6's driver floor
+# is r560, so `2.14.0+cu126` runs on both.
+#
+# This is a whole project rather than a bare second lockfile because a lockfile is only valid
+# against the `pyproject.toml` it was resolved from: the `[[tool.uv.index]]` below is what puts
+# torch on the cu126 index. Re-lock with:
+#     uv lock --project robojev/trainer/cluster
+name = "robojev-trainer-cluster"
+version = "0.1.0"
+description = "The RoboJEV trainer's environment for a CUDA 12 node: the same pins, torch from cu126"
+requires-python = "==3.14.*"
+dependencies = [
+    "torch==2.14.0",
+    "transformers==5.17.0",
+    "safetensors==0.8.0",
+    "numpy==2.5.3",
+    "huggingface-hub",
+    "msgpack>=1.0",
+]
+
+# `explicit = true`: only the packages `[tool.uv.sources]` names come from here. torch's own
+# `nvidia-*-cu12` dependencies still resolve from PyPI -- the index override is one package wide
+# on purpose.
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
