@@ -33,23 +33,115 @@ import math
 
 import numpy as np
 
-# The expert is the measurement, and it is imported rather than re-derived: one source of truth
-# for the step sizes, the bands and the grasp tolerance (the measurements, §4). It is pure numpy --
+from robojev.planner.pick_and_place import SUBGOALS, XY_TOL, YAW_TOL_DEG
+
+# ------------------------------------------------------------------------ the arm, as measured
+#
+# Every number below is a measurement of what the arm *executes*, taken on LIBERO-Spatial with
+# the plan in `robojev.planner` closing the loop (docs/DESIGN.md §4). It is pure numpy --
 # `test_the_module_is_light` still holds.
-from robojev.expert import (
-    AXISWISE_SCALE,
-    rim_gold as expert_rim_gold,
-    EXECUTED_COARSE_PER_DELTA_T,
-    EXECUTED_DEG_PER_UNIT,
-    FINE_BAND,
-    HOLD_BAND,
-    V2_PHASE_SUBGOAL,
-    XY_TOL,
-    YAW_SCALE,
-    YAW_TOL_DEG,
-)
+
+#: **How far a coarse chunk actually moves the hand, in metres per unit of δ_t.** The one
+#: measurement this whole controller is built on, and it is not the number the composer's units
+#: suggest. `OSC_POSE` maps a full-scale component onto 5 cm *commanded* per control step, so five
+#: of them command `0.25 × δ_t` metres -- but robosuite re-sets the OSC goal to `current + delta`
+#: every step and the arm's impedance only closes a fifth of that gap in one 20 Hz step, so what
+#: it *executes* is a fifth of what it asks for.
+#:
+#: Measured (`scratch/stage9-expert/calibrate.py`, LIBERO-Spatial task 0 from its settled reset
+#: pose, five identical steps per cell, metres travelled):
+#:
+#: | δ_t | ±x | ±y | ±z | (coarse) | ±x | ±y | ±z | (fine) |
+#: |---|---|---|---|---|---|---|---|---|
+#: | 0.3536 | 0.0156 | 0.0190 | 0.0193 | | 0.0051 | 0.0062 | 0.0063 | |
+#: | 0.50 | 0.0222 | 0.0270 | 0.0274 | | 0.0073 | 0.0088 | 0.0090 | |
+#: | 0.75 | 0.0335 | 0.0405 | 0.0411 | | 0.0110 | 0.0134 | 0.0136 | |
+#: | 1.00 | 0.0449 | 0.0541 | 0.0549 | | 0.0147 | 0.0179 | 0.0182 | |
+#:
+#: Exactly linear in δ_t, and `fine` is exactly a third of `coarse` at every δ_t -- the composer's
+#: `FINE_FRACTION` survives the controller. x is ~17 % slower than y and z (the Panda's reach
+#: direction), which one scalar cannot express; 0.050 is the mean and the error it makes is
+#: absorbed by the next decision, because every threshold below is re-read from the current state.
+EXECUTED_COARSE_PER_DELTA_T: float = 0.050
+
+#: **Degrees of wrist yaw the arm actually executes per normalised unit, per decision.** The
+#: rotation half of `EXECUTED_COARSE_PER_DELTA_T`, and measured the same way
+#: (`scratch/v2-drawer/calib_yaw.py`: five identical control steps from the settled reset pose,
+#: the change in the gripper's own closing-axis angle, repeated eight times):
+#:
+#: | command | executed deg / decision | eef drift over 8 decisions |
+#: |---|---|---|
+#: | 0.105 | 3.6 | 1 mm |
+#: | 0.25 | 8.0 | 3 mm |
+#: | **0.50** | **14.1** | 8 mm |
+#: | 1.00 | 18.9 | **18 cm** -- the OSC drags the hand across the table; unusable |
+#:
+#: So the wrist turns ~28 degrees per unit per decision, not the 143 the commanded scale
+#: (`5 steps x 0.5 rad`) suggests. **This is why the wrist was unaffordable**: the note's
+#: "δ_r buys 8.3 degrees per decision" was a *commanded* figure, the served `yaw` size executed
+#: 3.6, and a right angle cost 25 decisions of a 44-decision horizon. At the measured scale a
+#: right angle costs 6, which is what makes `yaw` a question worth asking (note
+#: docs/DESIGN.md).
+EXECUTED_DEG_PER_UNIT: float = 28.0
+
+#: What each step size turns the wrist by, in **degrees executed per decision** -- the rotation
+#: counterpart of `AXISWISE_SCALE`, and the numbers `v2.compose.YAW_*_DEG` are. One decision of
+#: `large` is a sixth of a right angle; the wrist is held to the same size as the hand's largest
+#: translation, because it is one hand.
+YAW_SCALE: dict[str, float] = {"large": 15.0, "medium": 5.0, "small": 1.5}
+
+#: **The step scale every label is written at, in normalised units: 1.0.** A `large` answer is a
+#: full OSC component -- the controller's range limit -- and executes ~5 cm per decision per axis.
+#: At the demonstrations' 0.3536 a coarse chunk executes 1.8 cm and one LIBERO-Spatial episode
+#: needs 40+ decisions before the gripper has closed; at 1.0 the three sizes tile the line at
+#: 0.8 cm / 2.5 cm, finer than the spread the demonstrations' own grasps sit in. A
+#: checkpoint trained on these labels has to be served at this δ_t (its `robojev.json` says so):
+#: composed with the demonstrations' 0.3536 instead it would execute a fifth of every move.
+LABEL_DELTA_T: float = 1.0
+#: δ_r as a checkpoint's manifest carries it. Nothing scales the wrist by it any more -- a
+#: rotation is scaled by the measured `EXECUTED_DEG_PER_UNIT` -- but it is part of every
+#: harvest's shape and every checkpoint's provenance, so it stays one number in one place.
+LABEL_DELTA_R: float = 0.05785714285714285
+
+#: Where the three step sizes hand over to each other, as fractions of what they execute. The
+#: textbook answer is 0.5 and 0.5 -- hand over exactly half way, so the residual after a step is
+#: never more than half the step. Both are **above** a half here because the arm does not stop when
+#: the command does: an OSC goal set five times in a row leaves the hand moving, and a chunk
+#: commanded `-z` is measurably still drifting `+y` from the chunk before it. Measured on task 0:
+#: at 0.5/0.5 the approach overshot the rim in y and spent four decisions oscillating across it.
+#: Preferring the smaller step over a wider band costs one extra decision per reach and removes
+#: the oscillation, which cost four.
+FINE_BAND: float = 0.7
+HOLD_BAND: float = 0.6
+
+#: What each size executes, as a fraction of a full-scale component: 5.0 / 1.7 / 0.5 cm per axis
+#: at the measured scale. `small` exists because `medium` (1.7 cm) is larger than the grasp's own
+#: positioning tolerance, so a two-size vocabulary cannot place the hand on the rim.
+AXISWISE_SCALE: dict[str, float] = {"large": 1.0, "medium": 1.0 / 3.0, "small": 0.1}
+
+
+def rim_label(rows) -> str:
+    """The `rim` answer the state's own candidate block implies: **the first listed candidate
+    that fits and has not been tried**, and the first untried one when none of them fits.
+
+    One relation per line and no arg-max over a column: every row carries its own verdict, and
+    this reads them in order.
+    """
+    rows = list(rows)
+    if not rows:
+        return RIM_LETTERS[0]
+    for row in rows:
+        if row["fits"] and not row["tried"]:
+            return row["letter"]
+    for row in rows:
+        if not row["tried"]:
+            return row["letter"]
+    return rows[0]["letter"]
+
+
 from robojev.questions import (
     ACTIVE_QIDS,
+    RIM_CANDIDATES as RIM_LETTERS,
     AXIS_CANDIDATES,
     COMMIT_STEPS,
     MOVE_QIDS,
@@ -363,7 +455,7 @@ def normalise_phase(phase: str) -> str:
     v1's `robojev.memory.phase` names a `locate` stage, which v2 has no candidate for:
     grounding is the once-per-episode `target` question now, so by the time the motion questions
     are asked the target is committed and the stage is `reach`. `expert.py`'s own eight-state
-    phase machine maps through `PHASE_FROM_EXPERT` below.
+    phase machine maps through `PHASE_SUBGOAL` below.
     """
     if phase in ("locate", None, ""):
         return "reach"
@@ -379,7 +471,7 @@ def normalise_phase(phase: str) -> str:
 #: cannot name different stages for the same decision. (`descend` is `reach` and not `grasp`:
 #: the expert's `close` is the decision that shuts the fingers, and `grasp` is the candidate
 #: whose text says "this is where they close".)
-PHASE_FROM_EXPERT: dict[str, str] = V2_PHASE_SUBGOAL
+PHASE_SUBGOAL: dict[str, str] = SUBGOALS
 
 
 def labels_from_waypoint(offset_cm, yaw_err: float, holding: bool, phase: str,
@@ -449,7 +541,7 @@ def labels_from_waypoint(offset_cm, yaw_err: float, holding: bool, phase: str,
     # geometry here: the label has to be a function of the text (§2 principle 1), and the text
     # carries a verdict per row precisely so that the rule is "the first that fits and is
     # untried" rather than an arg-max over a column of centimetres.
-    answers["rim"] = expert_rim_gold(rim)
+    answers["rim"] = rim_label(rim)
     return {qid: answers[qid] for qid in qids}
 
 
@@ -581,7 +673,7 @@ __all__ = [
     "AXIS_CANDIDATES", "AXIS_SLOT", "CHUNK_STEPS", "DEFAULT_ARRIVAL_CM", "DEFAULT_CM_PER_UNIT",
     "DEFAULT_DEG_PER_UNIT", "DEFAULT_LATCH_GUARD", "DEFAULT_STEPS", "DEFAULT_TOLERANCE_CM",
     "DEFAULT_YAW_TOLERANCE_DEG", "FINE_BAND", "GripLatch", "HOLD_BAND", "LatchGuard",
-    "OSC_MAX_DPOS", "OSC_MAX_DROT", "PHASE_FROM_EXPERT", "SIGN", "STEP_LARGE_CM",
+    "OSC_MAX_DPOS", "OSC_MAX_DROT", "PHASE_SUBGOAL", "SIGN", "STEP_LARGE_CM",
     "LATCH_TABLE", "STEP_MEDIUM_CM", "STEP_SMALL_CM", "StepSizes", "YAW_LARGE_DEG",
     "YAW_MEDIUM_DEG",
     "YAW_SLOT", "YAW_SMALL_DEG", "calibrate", "chunk", "compose", "labels_from_waypoint",

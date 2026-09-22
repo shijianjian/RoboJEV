@@ -11,18 +11,19 @@ The pieces, and which side of the fine-tune each is on:
 
 * **the question set** -- the questions (`questions`), the state text and the tracker that fills
   it (`state`), the composer (`compose`), the parser that reads a state back (`parse`), the scene
-  grounding (`grounding`) and the expert harvest (`rollout`). Both sides read all of it, which is
+  grounding (`grounding`) and the harvest (`rollout`). Both sides read all of it, which is
   the whole point: a training row and an inference request are built from the same numbers by the
   same code, so nothing can drift.
-* **the plan** -- `expert`, `skill`, `scene`, `roles`: a scripted controller that is right by
-  construction at every state, the small step machine it is written in, and the two rules that
-  read a scene (which object the task means, and what stage the episode is in). Code plans; the
-  model judges.
+* **the plan** -- `planner` (`planner.pick_and_place` on `planner.executor`), `scene`, `roles`:
+  the stage table that proposes one waypoint per decision, the small step machine it is written
+  in, and the two rules that read a scene (which object the task means, and what stage the
+  episode is in). Code plans; the model judges.
 * **the pipeline** -- `dagger`, `train`, `slurm`, `dataset`, `runtime`: one DAgger round, the
   fine-tune, the cluster job, the shape of the directory they all read and write, and the
   environment the trainer runs in.
-* **serving** -- `policy` (three engines behind one interface), `episode` (the closed loop),
-  `recorder` (one episode as a replay bundle), `cli`.
+* **serving** -- `policy` (the model engines behind one interface), `model_server` (the same
+  policy in its own process), `episode` (the closed loop), `recorder` (one episode as a replay
+  bundle), `cli`.
 * `envs` -- the environment protocol and the LIBERO adapter. The only simulator import.
 * `registry` -- which question set a checkpoint speaks, decoded in one place.
 * `jev_api` -- a hosted model, wearing the local predictor's interface.
@@ -47,7 +48,7 @@ from robojev.compose import (
     MEASURED_CM_PER_UNIT,
     MEASURED_DEG_PER_UNIT,
     MEASURED_STEPS,
-    PHASE_FROM_EXPERT,
+    PHASE_SUBGOAL,
     STEP_LARGE_CM,
     STEP_MEDIUM_CM,
     STEP_SMALL_CM,
@@ -117,7 +118,7 @@ __all__ = [
     "DEFAULT_VERSION", "DEFAULT_YAW_TOLERANCE_DEG", "EPISODE_QIDS", "GripLatch", "HELD_FOR",
     "LATCH_TABLE", "LatchGuard", "MAX_PATH_TOKENS_V2", "MEASURED_CM_PER_UNIT",
     "MEASURED_DEG_PER_UNIT", "MEASURED_PATH_TOKENS_V2", "MEASURED_STEPS", "MEMORY_RULE_V2",
-    "MOTION_QIDS", "MOVE_QIDS", "PARSED_QIDS", "PHASE_FROM_EXPERT", "QUESTIONS",
+    "MOTION_QIDS", "MOVE_QIDS", "PARSED_QIDS", "PHASE_SUBGOAL", "QUESTIONS",
     "QUESTION_SET_VERSION", "RIM_CANDIDATES", "SIZE_QIDS", "STEP_CANDIDATES", "STEP_LARGE_CM",
     "STEP_MEDIUM_CM", "STEP_SMALL_CM", "SUBGOAL_CANDIDATES", "SUBSTAGE_LABEL", "StepSizes",
     "TrackerV2", "UnparseableState", "VERSIONS", "Waypoint", "__version__", "active_qids",

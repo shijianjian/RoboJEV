@@ -33,10 +33,10 @@ import dataclasses
 
 import numpy as np
 
-# The expert's own geometry, imported rather than re-derived: `grasp_direction` and the tuned
-# constants are what the 85/100 run was measured with, and a second copy of them here would be a
-# second thing to retune (docs/DESIGN.md §1).
-from robojev.expert import (
+# The planner's own geometry, imported rather than re-derived: `grasp_direction` and the tuned
+# constants are what the closed-loop tables were measured with, and a second copy of them here
+# would be a second thing to retune (docs/DESIGN.md §1).
+from robojev.planner.pick_and_place import (
     CARRY_CLEARANCE,
     FINGER_HALF_WIDTH,
     DROP_TOL,
@@ -46,19 +46,16 @@ from robojev.expert import (
     RETRY_DZ,
     RIM_RADIUS,
     SETTLE_DECISIONS,
+    SUBGOALS,
     grasp_direction,
+    new_phase as _new_carry,
+    plan as _plan,
+    rim_point as _rim_point,
+    with_executed as _with_executed,
 )
-from robojev.expert import (
-    EXPERT_DELTA_T,
-    V2_PHASE_SUBGOAL,
-    decide as _expert_decide,
-    new_phase as _expert_new_phase,
-    with_executed as _expert_with_executed,
-)
-from robojev.expert import rim_point as _expert_rim_point
+from robojev.planner.executor import held as skill_held
 from robojev.roles import CLOSED_WIDTH, phase
 from robojev.scene import movable, short_id, support as scene_support
-from robojev.skill import held as skill_held
 from robojev.compose import (
     AXIS_SLOT,
     CHUNK_STEPS,
@@ -173,7 +170,7 @@ def rim_point(eef_xy, object_pos, radius_m: float = DEFAULT_RIM_RADIUS_M,
     measured. `waypoint_for` does *not* use this direction -- see `grasp_direction`.
     """
     obj = np.asarray(object_pos, dtype=np.float64).reshape(3)
-    xy = _expert_rim_point(obj[:2], eef_xy, radius_m)
+    xy = _rim_point(obj[:2], eef_xy, radius_m)
     return np.array([xy[0], xy[1], obj[2] + dz_m])
 
 
@@ -256,7 +253,7 @@ SUBSTAGE_LABEL: dict[str, str] = {
 
 
 def plan(proprio, objects: dict, instruction: str, carry: dict | None, *,
-         delta_t: float = EXPERT_DELTA_T, qids=None) -> tuple["Waypoint", str, dict, dict]:
+         qids=None) -> tuple["Waypoint", str, dict, dict]:
     """The waypoint, the sub-stage, the next phase carry and the planner's facts.
 
     **This is the expert's own phase machine, imported and not re-implemented.** The plan is
@@ -277,9 +274,8 @@ def plan(proprio, objects: dict, instruction: str, carry: dict | None, *,
     `test_the_closed_loop_runs_on_the_parsed_answers_alone` drives the simulator with nothing but
     `parse(serialise_v2(...))`.
     """
-    carry = _expert_new_phase() if carry is None else carry
-    _choices, nxt, meta = _expert_decide(proprio, objects, instruction, carry,
-                                         delta_t=delta_t, qids=qids)
+    carry = _new_carry() if carry is None else carry
+    _goal, nxt, meta = _plan(proprio, objects, instruction, carry, qids=qids)
     eef = np.asarray(proprio, dtype=np.float64).reshape(-1)[0:3]
     offset = np.asarray(meta["error"], dtype=np.float64).reshape(3)
     substage = meta["phase"]
@@ -426,6 +422,9 @@ class TrackerV2:
         self._carry: dict | None = None
         self._closed_offset: list[float] | None = None
         self._substage = "approach"
+        #: The planner's own facts about the decision last observed (`planner.plan`'s `meta`),
+        #: or None where there is no plan. A harvest records a few of them beside each row.
+        self.plan_meta: dict | None = None
         self.latch.reset()
 
     def commit(self, target: str | None, destination: str | None, step: int = 0,
@@ -445,7 +444,7 @@ class TrackerV2:
         self._committed_attempts = self._grasp_attempts
         # The plan follows the *committed* pair, not the planner's own reading of the sentence:
         # the whole point of asking `target` once is that everything afterwards refers to it.
-        self._carry = _expert_new_phase({"target": target, "destination": destination})
+        self._carry = _new_carry({"target": target, "destination": destination})
 
     def committed(self) -> dict | None:
         """What was committed, and how."""
@@ -542,11 +541,12 @@ class TrackerV2:
 
         if self.instruction is not None and self.target in objects:
             if self._carry is None:
-                self._carry = _expert_new_phase({"target": self.target,
+                self._carry = _new_carry({"target": self.target,
                                                  "destination": self.destination})
             wp, substage, self._carry, meta = plan(proprio, objects, self.instruction,
                                                    self._carry, qids=self.qids)
-            stage = V2_PHASE_SUBGOAL[substage]
+            self.plan_meta = meta
+            stage = SUBGOALS[substage]
             self._grasp_attempts = int(meta["attempts"])
             holding = bool(meta["held"])
             # **The wrist's error is the plan's, not the caller's.** It is how far the wrist must
@@ -559,6 +559,7 @@ class TrackerV2:
             rim = tuple(meta.get("rim") or ())
             rests = _rests_words(self.target, objects, meta)
         else:
+            self.plan_meta = None
             rim, rests = (), ""
             substage = "approach"
             stage = self._stage(proprio, objects, index)
@@ -604,7 +605,7 @@ class TrackerV2:
         """
         if self._rows and answers is not None:
             self._rows[-1].answers = dict(answers)
-            self._carry = _expert_with_executed(self._carry, answers, qids=self.qids)
+            self._carry = _with_executed(self._carry, answers, qids=self.qids)
 
     # ------------------------------------------------------------------------------ internals
 

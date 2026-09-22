@@ -1,32 +1,30 @@
-"""RoboJEV v2's training rows, harvested from the scripted expert's **own rollouts**.
+"""RoboJEV's training rows: the states a label rollout visits, labelled from their own text.
 
-Why this module exists, in one sentence: v1's labels were what a teleoperator did next, which is
-not a function of the state the model reads (failure F2), and the latest NanoJev note measured the
-whole of its Basic gap closing when the label source became *one authoritative controller action
-per decision*. `robojev.expert` is that controller; this is the harvester that runs it and
-writes down what it said.
+A row is one state text and the answers the label function reads off it
+(`compose.labels_from_waypoint` over the numbers the text prints; `parse` recovers the same answers
+from the string alone). The states come from **label rollouts**: the harvest drives the arm with
+exactly those labels -- `parse(serialise(state))` composed by `compose.chunk` -- so every state a
+row describes is one the planner-plus-labels loop actually reached. Nothing here is a policy anyone
+can select or serve; it is how the training data is generated.
 
 Three things about the way it runs are deliberate, and each is a measured decision rather than a
 style choice.
 
-**The rows are what the expert would do; the arm does something slightly else.** Every motion
-answer is corrupted with probability ε (`RolloutConfig.epsilon`) *after* the gold is recorded, so
-the state distribution the model trains on contains the states a ~90 %-accurate policy actually
-wanders into -- upstream's Basic keeps every visited state, exploration included. `grip` is exempt
-(the design notes, the measurements): the latch is the one answer the closed loop cannot absorb an error in
-(19/20 -> 7/20 at p = 0.10 with it corrupted, 11-13/20 with it exempt), and an exploring
-controller plus an irreversible action is most of upstream's own Predict-Position gap.
+**The rows are the labels; the arm does something slightly else.** Every motion answer is
+corrupted with probability ε (`RolloutConfig.epsilon`) *after* the label is recorded, so the state
+distribution the model trains on contains the states a ~90 %-accurate policy actually wanders into
+-- upstream's Basic keeps every visited state, exploration included. `grip`, `yaw` and `rim` are
+exempt (`RolloutConfig.epsilon_exempt`): the latch is the one answer the closed loop cannot absorb
+an error in (19/20 -> 7/20 at p = 0.10 with it corrupted, 11-13/20 with it exempt).
 
 **No outcome filter.** A failed episode is kept in full. The one filter is upstream's ammo
 analogue: after the release there is no grasp to decide about, so a `retreat` row carries every
 question *except* `grip`.
 
-**The gold is read off the tracker, never off the controller.** `expert.gold_for_state` returns
-`TrackerV2.gold_answers()` -- the label function applied to the numbers the state string prints --
-and raises when the tracker's waypoint and the expert's own differ by more than a tolerance that
-could change an answer. So gate G3's invariant ("the state text alone reproduces the label") is
-asserted at the moment a row is written, on every row, rather than discovered weeks later as a
-97 % parser. `parse_agreement` re-reads what was written and reports it per question.
+**Gate G3 is asserted at write time.** Every row's own text is re-parsed and must reproduce its
+own label (`check_row`), so "the state text alone reproduces the label" is checked on every row
+rather than discovered weeks later as a 97 % parser. `parse_agreement` re-reads what was written
+and reports it per question.
 
 The grounding rows of `robojev.grounding` join the same directory as their own rows,
 with `metadata.source = "grounding"` and their own **instruction-level** split: a held-out task
@@ -45,7 +43,6 @@ import numpy as np
 
 from robojev import dataset as dataset_mod
 from robojev import envs as env_mod
-from robojev import expert as expert_mod
 from robojev import home
 from robojev import roles as roles_mod
 from robojev.dataset import log_to_stderr
@@ -57,36 +54,42 @@ from robojev import state as state_mod
 #: re-exports a *function* called `parse`, so the plain form hands back the function and every
 #: attribute lookup on it raises. `compose` has the same trap.
 parse_mod = import_module("robojev.parse")
-from robojev.compose import MEASURED_CM_PER_UNIT, MEASURED_STEPS
+from robojev.compose import (
+    CHUNK_STEPS,
+    LABEL_DELTA_R,
+    LABEL_DELTA_T,
+    MEASURED_CM_PER_UNIT,
+    MEASURED_STEPS,
+    chunk as compose_chunk,
+)
 
-#: `metadata.source` of a row written from an expert rollout, and the value a directory's manifest
-#: carries. A directory holds **one** source: `--source demos` rows and `--source expert` rows
-#: answer different questions about different states and merging them into one file would train
-#: one model on two definitions of a label (the same rule `_check_row_shape` below enforces for
-#: the row shape).
-SOURCE: str = "expert_rollout"
-#: `metadata.source` of a BDDL grounding row riding in the same directory (Task 4's rows).
+#: `metadata.source` of a row written by a label rollout, and the value a directory's manifest
+#: carries. A directory holds **one** source (the rule `_check_shape` below enforces).
+SOURCE: str = "label_rollout"
+#: `metadata.source` of a BDDL grounding row riding in the same directory.
 GROUNDING_SOURCE: str = "grounding"
-#: And of a DAgger row relabelled by this expert on the model's own visited states.
-DAGGER_SOURCE: str = "dagger_expert"
+#: And of a DAgger row: a model's own visited state, labelled by the same label function.
+DAGGER_SOURCE: str = "dagger"
 
-#: What `--source` may be on `robojev harvest robojev`.
-SOURCES: tuple[str, ...] = ("demos", "expert")
-
-#: Every gold here is a controller's reference answer, not a sampled outcome: the kind the
-#: trainer's `paired_brier_pg` must *not* be fed. `grip` included -- it is a latch, a decision the
-#: expert makes, which is exactly what the design notes's principle 3 asks for.
+#: Every label here is a reference answer read off the state, not a sampled outcome: the kind the
+#: trainer's `paired_brier_pg` must *not* be fed.
 LABEL_KIND: str = "reference_argmax_compatibility"
 
 #: The mass the **soft** target puts on the chosen candidate, for the comparison arm only
-#: (`RolloutConfig.soft_targets`). NanoJev's own declared-actuator-noise level, unchanged from the
-#: number every earlier run softened its labels with.
+#: (`RolloutConfig.soft_targets`). NanoJev's own declared-actuator-noise level.
 SOFT_RHO: float = 0.85
 
-#: **Hard** one-hot targets, not `expert.probabilities`' declared-noise softening. Note §3 and
-#: §6.1: the hard arm won action agreement 81.6 % against the soft arm's 77.1 % on upstream's own
-#: comparison. The soft arm stays reachable through `RolloutConfig.soft_targets` so the two can be
-#: measured on identical states, and it is not the default.
+#: **Hard** one-hot targets by default: the hard arm won action agreement 81.6 % against the soft
+#: arm's 77.1 % on upstream's own comparison. The soft arm stays reachable through
+#: `RolloutConfig.soft_targets` so the two can be measured on identical states.
+#: What a harvested row's `label_source` says: the tracker's label function, over the text.
+LABEL_SOURCE: str = "tracker"
+
+#: The answers ε may corrupt, **in the order the corruption stream draws for them**. The order
+#: is part of the harvest's bytes: one coin per answer that is not exempt, drawn in this order.
+NOISE_ORDER: tuple[str, ...] = ("yaw", "grip", "move_x", "size_x", "move_y", "size_y",
+                                "move_z", "size_z", "rim")
+
 PROBS_KIND: str = dataset_mod.PROBS_KIND
 
 PROVENANCE: str = dataset_mod.PROVENANCE
@@ -117,7 +120,7 @@ POLICY_DIR: str = "robojev-v2"
 
 
 def out_root(suite: str, policy: str = POLICY_DIR) -> pathlib.Path:
-    """`$ROBOJEV_HOME/data/robojev-v2/<suite>` -- where an expert harvest lands by default."""
+    """`$ROBOJEV_HOME/data/robojev-v2/<suite>` -- where a harvest lands by default."""
     return home.home() / "data" / policy / suite
 
 
@@ -181,26 +184,25 @@ class RolloutConfig:
     #: `v2.compose.MEASURED_CM_PER_UNIT` -- what one unit of normalised δ_t actually executes.
     cm_per_unit: float = MEASURED_CM_PER_UNIT
     #: §7 a design ruling: a v2 checkpoint is served at δ_t = 1.0, so its labels are harvested there.
-    delta_t: float = expert_mod.EXPERT_DELTA_T
-    delta_r: float = expert_mod.EXPERT_DELTA_R
+    delta_t: float = LABEL_DELTA_T
+    delta_r: float = LABEL_DELTA_R
     grounding_rows: bool = True
     #: How many copies of every grounding scene to write (see `grounding_rows`). 1 -- the
     #: default -- is the un-augmented file every existing directory holds, byte for byte.
     grounding_repeats: int = 1
     seed: int = 17
     max_steps: int = 220
-    #: Which questions are asked. Follows `v2.questions.ACTIVE_QIDS`, which is the set the
-    #: heuristic server serves; `yaw` is defined but off on LIBERO-Spatial.
+    #: Which questions are asked. Follows `questions.ACTIVE_QIDS`, the set a checkpoint serves.
     qids: tuple[str, ...] = questions_mod.ACTIVE_QIDS
     #: The held-out pair, over `suite_tasks`. `None` means `dataset.resolve_splits`' rule: the
     #: last task is `test` and the one before it is `dev`.
     dev_task: int | None = None
     test_task: int | None = None
-    #: Hard one-hot gold (the default, the measurements) or `expert.probabilities`' softening.
+    #: Hard one-hot gold (the default) or the `SOFT_RHO` softening.
     soft_targets: bool = False
-    #: Raise the moment `expert.gold_for_state` says the tracker's waypoint and the expert's
-    #: disagree. On by default: a silent drop would turn a planner bug into a quiet 3 % of missing
-    #: episodes.
+    #: Raise the moment a state cannot be labelled (no waypoint, an unreadable text) instead of
+    #: dropping the episode. On by default: a silent drop would turn a planner bug into a quiet 3 %
+    #: of missing episodes.
     strict_gold: bool = True
     #: Raise the moment a written row's own state text does not re-parse to its own gold. Gate
     #: G3's invariant, asserted per row at write time.
@@ -216,17 +218,16 @@ class RolloutConfig:
     def tracker_kwargs(self, instruction: str | None = None) -> dict:
         """The `TrackerV2` constructor arguments this configuration implies.
 
-        `instruction` is passed through because the tracker steers by the expert's own sub-stage
+        `instruction` is passed through because the tracker steers by the planner's sub-stage
         machine when it has one, and by `waypoint_for`'s plainer geometry when it does not. A
-        harvest always has one: the labels of record are the plan's, and a tracker planning a
-        different route from the expert would fail `gold_for_state`'s waypoint check on row one.
+        harvest always has one: the labels of record are the plan's.
         """
         return {"horizon": self.horizon(), "qids": tuple(self.qids), "annotate": self.annotate,
                 "instruction": instruction}
 
     def horizon(self) -> int:
         """Decisions in an episode, which is what the state's `Decision k of N` line prints."""
-        return int(self.max_steps // expert_mod.CHUNK_STEPS)
+        return int(self.max_steps // CHUNK_STEPS)
 
 
 def split_config(cfg: RolloutConfig) -> dataset_mod.Splits:
@@ -250,7 +251,7 @@ def noise_exempt(cfg: RolloutConfig) -> tuple[str, ...]:
     """
     asked = set(cfg.qids)
     return tuple(sorted(set(cfg.epsilon_exempt)
-                        | {qid for qid in expert_mod.AXISWISE_CANDIDATES if qid not in asked}))
+                        | {qid for qid in NOISE_ORDER if qid not in asked}))
 
 
 def episode_seed(cfg: RolloutConfig, task_index: int, episode: int) -> int:
@@ -265,14 +266,14 @@ def episode_seed(cfg: RolloutConfig, task_index: int, episode: int) -> int:
 
 
 def row_id(suite: str, task_index: int, init_state: int, episode: int, step: int) -> str:
-    return f"expert:{suite}:{task_index}:{init_state}:{episode}:{step}"
+    return f"harvest:{suite}:{task_index}:{init_state}:{episode}:{step}"
 
 
 def dagger_row_id(source: str, suite: str, task_index: int, init_state: int, round_index: int,
                   step: int) -> str:
     """A relabelled row's id, which must not be able to collide with a harvested one.
 
-    `expert:libero_spatial:0:0:1:0` is a *harvest* row -- task 0, init 0, episode 1, decision 0 --
+    `harvest:libero_spatial:0:0:1:0` is a *harvest* row -- task 0, init 0, episode 1, decision 0 --
     and a DAgger round numbering its rounds from 1 would have produced exactly that string. The
     source leads the id instead, so a merged directory cannot have two rows claiming one id.
     """
@@ -304,7 +305,7 @@ def roles_for(env, objects: dict, eef, instruction: str) -> dict:
             destination = name
             break
     if destination is None:
-        found = expert_mod.resolve_roles(objects, instruction, eef).get("destination")
+        found = roles_mod.scene_roles(objects, instruction, eef).get("destination")
         destination = found if found != target else None
     return {"target": target, "destination": destination, "source": source}
 
@@ -317,7 +318,7 @@ def motion_row(*, cfg: RolloutConfig, suite: str, task_index: int, init_state: i
                step: int, split: str, state_text: str, gold: dict, tracker, meta: dict,
                executed: dict, roles: dict, decision_index: int,
                controller: dict | None = None, identifier: str | None = None) -> dict:
-    """One NanoJev training row for one decision point of one expert rollout.
+    """One NanoJev training row for one decision point of one rollout.
 
     Three answers to the same question are in play here and the row keeps all three apart,
     because conflating any two of them is how a dataset acquires a bug nobody can see:
@@ -325,12 +326,11 @@ def motion_row(*, cfg: RolloutConfig, suite: str, task_index: int, init_state: i
     * **`gold`** -- the label of record, `TrackerV2.gold_answers()`: the label function applied to
       the numbers the state string prints. This is what the row is labelled with, and what the
       parser has to reproduce.
-    * **`controller`** -- what `expert.answers_v2` itself answered, before any noise. It is the
-      same function of the same geometry, computed in metres rather than in the state's rounded
-      centimetres, so it agrees with `gold` on all but the band edges and the one decision either
-      side of a stage change. `metadata.gold_differs` counts where it does not, per row, which is
-      the honest measurement of that seam rather than an assumption about it.
-    * **`executed`** -- what the arm was actually commanded: `controller` with ε applied.
+    * **`controller`** -- what drove the arm before any noise, when that is something other than
+      `gold` (`None` for a label rollout, where it *is* the gold). `metadata.gold_differs` counts
+      where the two disagree.
+    * **`executed`** -- what the arm was actually commanded: the answers with ε applied, or in a
+      DAgger round the policy's own answers.
       `metadata.noised` is exactly the set ε moved, which is what makes "ε never touches `grip`"
       a checkable claim rather than a promise.
     """
@@ -382,9 +382,9 @@ def motion_row(*, cfg: RolloutConfig, suite: str, task_index: int, init_state: i
             "memory_target": roles["target"],
             "memory_destination": roles["destination"],
             "history_source": "executed",
-            "label_source": "expert_tracker",
+            "label_source": LABEL_SOURCE,
             "gold_source": meta.get("gold_source", "tracker"),
-            "expert_phase": meta.get("phase"),
+            "plan_stage": meta.get("phase"),
             "tracker_subgoal": meta.get("tracker_subgoal"),
             "tracker_offset_cm": meta.get("tracker_offset_cm"),
             "waypoint_cm": meta.get("waypoint_cm"),
@@ -435,7 +435,7 @@ def _soft(qid: str, value, question: dict) -> dict[str, float]:
     criteria = _candidates(question)
     chosen = _as_label(value) if question["type"] == "boolean" else value
     if chosen not in criteria:
-        raise RolloutError(f"{qid}: the expert answered {value!r}, not one of {criteria}")
+        raise RolloutError(f"{qid}: the label is {value!r}, not one of {criteria}")
     spread = (1.0 - SOFT_RHO) / max(len(criteria) - 1, 1)
     return {candidate: (SOFT_RHO if candidate == chosen else spread) for candidate in criteria}
 
@@ -448,7 +448,7 @@ def _one_hot(qid: str, value, question: dict) -> dict[str, float]:
                 "true": 1.0 if chosen == "true" else 0.0}
     criteria = _candidates(question)
     if value not in criteria:
-        raise RolloutError(f"{qid}: the expert answered {value!r}, which is not one of {criteria}")
+        raise RolloutError(f"{qid}: the label is {value!r}, which is not one of {criteria}")
     return {candidate: (1.0 if candidate == value else 0.0) for candidate in criteria}
 
 
@@ -456,100 +456,110 @@ def _one_hot(qid: str, value, question: dict) -> dict[str, float]:
 # one episode
 
 
-class _Episode:
-    """The `on_decision` callback `expert.run_episode` writes a row through.
+def corrupt(answers: dict, p: float, rng, *, exempt: tuple[str, ...] = ()) -> dict:
+    """Each answer independently replaced, with probability `p`, by a uniformly chosen *other*
+    candidate of its own question -- ε, the model's error model applied to the arm.
 
-    The expert's phase carry is mirrored here rather than read out of the callback, because the
-    callback is handed the decision *after* it was made and `gold_for_state` has to make the same
-    one. `decide` is pure and total, so a phase advanced from the same start over the same states
-    is the same phase, and `gold_for_state`'s own waypoint check is what says so out loud if it
-    ever stops being true.
+    One coin per answer in `NOISE_ORDER` that is present and not exempt, drawn in that order, so a
+    harvest's bytes are a function of its seed alone.
     """
+    out = dict(answers)
+    for qid in NOISE_ORDER:
+        if qid not in answers or qid in exempt or rng.random() >= p:
+            continue
+        value = answers[qid]
+        as_text = _as_label(value)
+        others = [c for c in questions_mod.candidates(qid) if c != as_text]
+        picked = others[int(rng.integers(len(others)))]
+        out[qid] = (picked == "true") if isinstance(value, bool) else picked
+    return out
 
-    def __init__(self, cfg: RolloutConfig, env, task_index: int, init_state: int, episode: int,
-                 split: str, roles: dict):
-        self.cfg = cfg
-        self.env = env
-        self.task_index = task_index
-        self.init_state = init_state
-        self.episode = episode
-        self.split = split
-        self.roles = roles
-        self.instruction = env.instruction
-        self.tracker = state_mod.TrackerV2(
-            target=roles["target"], destination=roles["destination"],
-            **cfg.tracker_kwargs(self.instruction))
-        self.tracker.commit(roles["target"], roles["destination"], step=0, source=roles["source"])
-        self.phase = expert_mod.new_phase(roles)
-        self.rows: list[dict] = []
-        self.error: str | None = None
 
-    def on_decision(self, index: int, choices: dict, meta: dict, state8, privileged: dict) -> None:
-        step = index * expert_mod.CHUNK_STEPS
-        self.tracker.observe(step=step, proprio=state8, objects=privileged)
-        state_text = state_mod.serialise_v2(state8, privileged, self.instruction, self.tracker,
-                                            annotate=self.cfg.annotate)
-        # The controller's own answer, before the noise and before the label function. Computed
-        # from the phase carry *as it stands*, which is the same carry `gold_for_state` is about
-        # to read, so it is the answer `run_episode` itself made at this decision.
-        controller, _nxt, _meta = expert_mod.answers_v2(
-            state8, privileged, self.instruction, self.phase, delta_t=self.cfg.delta_t,
-            roles=self.roles)
-        gold, self.phase, gold_meta = expert_mod.gold_for_state(
-            self.tracker, state8, privileged, self.instruction, self.phase,
-            delta_t=self.cfg.delta_t, roles=self.roles)
-        executed = {**choices, "grip": _as_label(choices.get("grip"))}
-        row = motion_row(
-            cfg=self.cfg, suite=self.cfg.suite, task_index=self.task_index,
-            init_state=self.init_state, episode=self.episode, step=step, split=self.split,
-            state_text=state_text, gold=gold, tracker=self.tracker, meta=gold_meta,
-            executed=executed, roles=self.roles, decision_index=index, controller=controller)
-        check_row(row, strict=self.cfg.strict_parse)
-        self.rows.append(row)
-        # The history block says what was **executed**, never what was merely answered: the effect
-        # column beside it is measured from the next observed state, and an action column
-        # describing a move that never happened is the one fiction the note rules out. Under ε
-        # that is the corrupted answer, which is the whole point of harvesting this way.
-        self.tracker.answer({**executed, "subgoal": gold.get("subgoal", self.tracker.subgoal)})
-        # ...and the mirrored carry takes the executed `rim` letter exactly as the tracker's and
-        # `run_episode`'s own do, so the three plans that have to agree about which rim point the
-        # episode is standing on stay one plan.
-        self.phase = expert_mod.with_executed(self.phase, executed)
+def _plan_facts(tracker) -> dict:
+    """What a row records about the plan it was labelled under: the tracker's own facts."""
+    plan = tracker.plan_meta or {}
+    offset = tracker.last_row.waypoint_cm
+    offset = None if offset is None else [float(v) for v in offset]
+    return {"gold_source": "tracker", "phase": plan.get("phase"),
+            "tracker_subgoal": tracker.subgoal, "tracker_offset_cm": offset,
+            "waypoint_cm": offset, "attempts": plan.get("attempts"), "held": plan.get("held")}
 
 
 def run_one(cfg: RolloutConfig, env, task_index: int, init_state: int, episode: int,
             split: str) -> dict:
-    """One expert episode: its rows, whether it succeeded, and what it cost.
+    """One label rollout: its rows, whether it succeeded, and what it cost.
 
-    The success flag is the closed-loop sanity number for the label policy **under ε-noise**: it
-    is the expert scored at exactly the accuracy the model is being asked to reach, so a harvest
-    whose episodes stop succeeding is a harvest whose ε is above what the vocabulary tolerates
-    (G4's table), not merely a noisier file.
+    The loop, per decision: observe the scene into the tracker, render the state text, read the
+    answers back off it (`parse`, which gate G3 guarantees equal to the label of record), write
+    the row, corrupt the motion answers with ε, compose them (`compose.chunk`) and step the arm
+    `CHUNK_STEPS` times. The tracker is told what was **executed**, so its history block and its
+    plan's `rim` choice describe the episode that actually ran.
+
+    The success flag is the closed-loop sanity number **under ε-noise**: the labels scored at
+    exactly the accuracy the model is being asked to reach.
     """
     obs = env.reset(init_state)
     privileged = env.privileged(obs)
     state8 = np.asarray(env.state_vector(obs), dtype=np.float64).reshape(-1)
-    roles = roles_for(env, privileged, state8[0:3], env.instruction)
-    recorder = _Episode(cfg, env, task_index, init_state, episode, split, roles)
-    outcome: dict[str, Any]
+    instruction = env.instruction
+    roles = roles_for(env, privileged, state8[0:3], instruction)
+    tracker = state_mod.TrackerV2(target=roles["target"], destination=roles["destination"],
+                                  **cfg.tracker_kwargs(instruction))
+    tracker.commit(roles["target"], roles["destination"], step=0, source=roles["source"])
+    rng = np.random.default_rng(episode_seed(cfg, task_index, episode))
+    exempt = noise_exempt(cfg)
+    rows: list[dict] = []
+    steps = decisions = 0
+    success = False
     try:
-        outcome = expert_mod.run_episode(
-            env, init_state, max_steps=cfg.max_steps, delta_t=cfg.delta_t, delta_r=cfg.delta_r,
-            roles=roles, corruption=cfg.epsilon,
-            corruption_exempt=noise_exempt(cfg),
-            seed=episode_seed(cfg, task_index, episode), on_decision=recorder.on_decision)
-    except expert_mod.ExpertError as exc:
+        while steps < cfg.max_steps and not success:
+            state8 = env.state_vector(obs)
+            privileged = env.privileged(obs)
+            step = decisions * CHUNK_STEPS
+            tracker.observe(step=step, proprio=state8, objects=privileged)
+            text = state_mod.serialise_v2(state8, privileged, instruction, tracker,
+                                          annotate=cfg.annotate)
+            gold = tracker.gold_answers()
+            # The arm is driven by what the **text** says, not by the tracker's own numbers: the
+            # two are equal (gate G3, asserted on this very row below), and reading the string is
+            # what makes the rollout a statement about the text a model will be shown.
+            parsed = parse_mod.parse(text, qids=tuple(gold))
+            executed = corrupt(parsed, cfg.epsilon, rng, exempt=exempt)
+            # Spelled as candidate ids, `grip` included, exactly as a served policy hands its own
+            # executed answers to its tracker -- the history block is rendered from this dict.
+            spelled = {qid: _as_label(v) for qid, v in executed.items()}
+            row = motion_row(
+                cfg=cfg, suite=cfg.suite, task_index=task_index, init_state=init_state,
+                episode=episode, step=step, split=split, state_text=text, gold=gold,
+                tracker=tracker, meta=_plan_facts(tracker), executed=spelled, roles=roles,
+                decision_index=decisions)
+            check_row(row, strict=cfg.strict_parse)
+            rows.append(row)
+            # The history block says what was **executed**, never what was merely labelled: the
+            # effect column beside it is measured from the next observed state.
+            tracker.answer({**spelled, "subgoal": gold.get("subgoal", tracker.subgoal)})
+            for action in compose_chunk(executed, MEASURED_STEPS, CHUNK_STEPS):
+                if steps >= cfg.max_steps:
+                    break
+                result = env.step(action)
+                obs, steps = result.obs, steps + 1
+                if result.done:
+                    success = True
+                    break
+            decisions += 1
+    except (ValueError, parse_mod.UnparseableState) as exc:
         if cfg.strict_gold:
             raise
         return {"task_index": task_index, "init_state": init_state, "episode": episode,
-                "split": split, "success": False, "steps": None, "decisions": len(recorder.rows),
+                "split": split, "success": False, "steps": None, "decisions": len(rows),
                 "rows": [], "error": repr(exc)}
+    plan = tracker.plan_meta or {}
     return {
         "task_index": task_index, "init_state": init_state, "episode": episode, "split": split,
-        "success": bool(outcome["success"]), "steps": int(outcome["steps"]),
-        "decisions": int(outcome["decisions"]), "attempts": int(outcome["attempts"]),
-        "out_of_horizon": bool(outcome["out_of_horizon"]), "target": roles["target"],
-        "rows": recorder.rows, "error": None,
+        "success": bool(success), "steps": int(steps), "decisions": int(decisions),
+        "attempts": int(plan.get("attempts") or 0),
+        "out_of_horizon": bool(not success and steps >= cfg.max_steps), "target": roles["target"],
+        "rows": rows, "error": None,
     }
 
 
@@ -798,7 +808,7 @@ def _worker(payload: str) -> None:  # pragma: no cover -- exercised by the real 
     _run_tasks(cfg, blob["out_dir"], blob["tasks"])
 
 
-def harvest_expert(cfg: RolloutConfig, out_dir, log=log_to_stderr, *, jobs: int = 1,
+def harvest(cfg: RolloutConfig, out_dir, log=log_to_stderr, *, jobs: int = 1,
                    env_factory=None, grounding_only: bool = False) -> dict:
     """Harvest every task in `cfg.tasks` into `out_dir`, and return (and write) the manifest.
 
@@ -897,7 +907,7 @@ def shape_of(cfg: RolloutConfig) -> dict:
         "horizon": cfg.horizon(),
         "memory_rule": state_mod.MEMORY_RULE_V2,
         "soft_targets": cfg.soft_targets,
-        "label_source": "expert_tracker",
+        "label_source": LABEL_SOURCE,
         "suite_tasks": list(cfg.suite_tasks),
         "inits": list(cfg.inits),
         "episodes_per_task": cfg.episodes_per_task,
@@ -935,8 +945,8 @@ def write_manifest(cfg: RolloutConfig, out_dir, previous: dict | None = None,
     `robojev.json` and refuses to launch against a mismatch -- the same guard `rho` already is for
     v1. The two measured numbers that are *not* knobs are here too: the per-question parse
     agreement over the rows actually written (gate G3, re-run on the real file), and the per-task
-    closed-loop success count of the ε-corrupted expert, which is the sanity number for the label
-    policy itself.
+    closed-loop success count of the ε-corrupted label rollouts, which is the sanity number for
+    the labels themselves.
     """
     out_dir = pathlib.Path(out_dir)
     previous = previous if previous is not None else (dataset_mod.read_manifest(out_dir) or {})
@@ -981,7 +991,7 @@ def write_manifest(cfg: RolloutConfig, out_dir, previous: dict | None = None,
         },
         "rows": {
             "total": sum(r["rows"] for r in records.values()) + grounding_count,
-            "expert_rollout": sum(r["rows"] for r in records.values()),
+            "motion": sum(r["rows"] for r in records.values()),
             "grounding": grounding_count,
             "by_split": _merge_counts(
                 [{r["split"]: r["rows"]} for r in records.values()] + [grounding_splits]),
@@ -1087,7 +1097,7 @@ def relabel(trace, instruction: str, privileged_seq, *, cfg: RolloutConfig | Non
             roles: dict | None = None, suite: str = "libero_spatial", task_index: int = 0,
             init_state: int = 0, episode: int = 0, split: str = "train",
             source: str = DAGGER_SOURCE) -> list[dict]:
-    """Relabel the states a **model** visited, with this expert, on the model's own history.
+    """Label the states a **model** visited, with the label function, on the model's own history.
 
     `trace` is one entry per decision the policy made and `privileged_seq` the matching object
     poses. An entry carries everything needed to **replay the server's own tracker**, because the
@@ -1118,10 +1128,9 @@ def relabel(trace, instruction: str, privileged_seq, *, cfg: RolloutConfig | Non
     cfg = cfg or RolloutConfig(suite=suite)
     tracker = rebuild_tracker(cfg, instruction)
     roles = dict(roles) if roles else None
-    phase = None
     rows: list[dict] = []
     for index, (entry, privileged) in enumerate(zip(trace, privileged_seq)):
-        step = int(entry.get("step", index * expert_mod.CHUNK_STEPS))
+        step = int(entry.get("step", index * CHUNK_STEPS))
         proprio = np.asarray(entry["proprio"], dtype=np.float64).reshape(-1)
         commit = entry.get("commit")
         if commit is None and index == 0 and roles is not None:
@@ -1136,7 +1145,6 @@ def relabel(trace, instruction: str, privileged_seq, *, cfg: RolloutConfig | Non
             tracker.commit(commit.get("target"), commit.get("destination"), step=step,
                            source=str(commit.get("source") or "model"))
             roles = {"target": commit.get("target"), "destination": commit.get("destination")}
-            phase = expert_mod.new_phase(roles)
         if roles is None:
             raise RolloutError(
                 f"the trace names no target at step {step}: a served v2 checkpoint commits one "
@@ -1166,8 +1174,12 @@ def relabel(trace, instruction: str, privileged_seq, *, cfg: RolloutConfig | Non
                 f"qids, same committed grounding, same executed answers, same latch events."
             )
         text = recorded or rebuilt
-        gold, phase, meta = expert_mod.gold_for_state(tracker, proprio, privileged, instruction,
-                                                      phase, delta_t=cfg.delta_t, roles=roles)
+        # The label of record: the label function over the numbers this very text prints.
+        try:
+            gold = tracker.gold_answers()
+        except ValueError as exc:
+            raise RolloutError(f"step {step}: {exc}") from exc
+        meta = _plan_facts(tracker)
         answers = {qid: _as_label(v) for qid, v in (entry.get("answers") or {}).items()}
         row = motion_row(
             cfg=cfg, suite=suite, task_index=task_index, init_state=init_state, episode=episode,
@@ -1187,17 +1199,8 @@ def relabel(trace, instruction: str, privileged_seq, *, cfg: RolloutConfig | Non
         _replay_latch(tracker, entry.get("latch"))
         # The policy's own executed answers drive the history, verbatim -- the same dict the
         # server hands its own tracker. A policy that reported nothing leaves the block blank
-        # rather than having the expert's answers attributed to it.
+        # rather than having the label function's answers attributed to it.
         tracker.answer(answers or None)
-        # ...and the **labeller's own carry takes the executed `rim` letter too**, because the
-        # tracker's just did and the two are the same plan. Skip it and the server's plan and
-        # this one stand on different candidates from the first selection that reads a letter --
-        # the episode's first decision, a blocked stage, a grasp that held nothing -- and the
-        # first retry puts them a rim axis and a retry offset apart. Round 1's second failure
-        # was exactly that: `in subgoal 'reach' the tracker steers to ... and the expert to ...
-        # they differ by 0.0150 m`, the model having asked again for the letter it had just
-        # tried while this carry moved on to the plan's next direction.
-        phase = expert_mod.with_executed(phase, answers or None, qids=tracker.qids)
     return rows
 
 
@@ -1222,7 +1225,7 @@ def _replay_latch(tracker, latch: dict | None) -> None:
 def main(argv=None) -> int:  # pragma: no cover -- the module entry point, for a worker shell
     """`python -m robojev.rollout --tasks 0,9 --out DIR` -- the harvest, standalone.
 
-    The CLI (`robojev harvest robojev --source expert`) is the supported surface; this exists so a
+    The CLI (`robojev harvest`) is the supported surface; this exists so a
     cluster job script can run one task subset without going through it.
     """
     import argparse
@@ -1244,7 +1247,7 @@ def main(argv=None) -> int:  # pragma: no cover -- the module entry point, for a
     cfg = RolloutConfig(suite=args.suite, tasks=tasks, episodes_per_task=args.episodes_per_task,
                         epsilon=args.epsilon, seed=args.seed,
                         grounding_rows=not args.no_grounding_rows, annotate=not args.no_annotate)
-    manifest = harvest_expert(cfg, pathlib.Path(args.out), jobs=args.jobs)
+    manifest = harvest(cfg, pathlib.Path(args.out), jobs=args.jobs)
     print(json.dumps(manifest["rows"], indent=2, sort_keys=True))
     return 0
 

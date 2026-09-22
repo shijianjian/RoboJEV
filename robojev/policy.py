@@ -1,24 +1,22 @@
-"""The policy: three engines, one interface.
+"""The policy: model engines behind one interface.
 
 Everything that drives an arm here goes through two methods -- `reset(instruction)` and
-`act(obs) -> (chunk, decisions)` -- and the three things that can be behind them are:
+`act(obs) -> (chunk, decisions)` -- and what is behind them is always a **model**:
 
-* **`ExpertPolicy`** -- the scripted expert (`robojev.expert`) answering the same ten questions a
-  learned policy answers. No weights, a few milliseconds a decision on a CPU, and it **finishes
-  the task** (90/100 LIBERO-Spatial episodes), which is the point: a baseline that never picks the
-  bowl up cannot tell a half-trained checkpoint from a broken one.
-* **`ModelPolicy`** -- a local NanoJev fine-tune. The checkpoint declares which question set it
-  speaks, what step size its answers mean and what tracker its rows were rendered with, and a
-  mismatch on any of those is refused at construction rather than served: a checkpoint served
-  under a vocabulary it was not trained on answers a different question about the same state,
-  silently, for a whole episode.
-* **`ModelPolicy(api="typesafe")`** -- the *hosted* model (`robojev.jev_api`), answering the same
-  question block about the same state text over HTTPS. That is the whole of the difference: the
-  questions, the serialiser, the plan, the tracker, the latch guard, the grounding rule and the
-  composer are shared, so "their model and ours" on one task is a comparison of two models rather
-  than of two harnesses.
+* **`robojev`** -- a local NanoJev fine-tune (`ModelPolicy`). The checkpoint declares which
+  question set it speaks, what step size its answers mean and what tracker its rows were rendered
+  with, and a mismatch on any of those is refused at construction rather than served: a
+  checkpoint served under a vocabulary it was not trained on answers a different question about
+  the same state, silently, for a whole episode.
+* **`jev`** -- the *hosted* model (`robojev.jev_api`), answering the same question block about
+  the same state text over HTTPS (`ModelPolicy(api="typesafe")`). The questions, the serialiser,
+  the plan, the tracker, the latch guard, the grounding rule and the composer are shared, so
+  "their model and ours" on one task is a comparison of two models rather than of two harnesses.
 
-`decisions` is the same block from all three: `{qid: {probabilities, choice, overridden}}` per
+`ENGINES` is the registry: one `Engine` per model family, and a new family is one more entry.
+`robojev.model_server` serves any of them from its own process and interpreter.
+
+`decisions` is the same block from every engine: `{qid: {probabilities, choice, overridden}}` per
 question, plus `meta` carrying the state text the answer was read off, the plan's sub-stage, the
 waypoint, the grounding and what the grip guard did. A replay bundle is that block, frame by
 frame.
@@ -26,27 +24,29 @@ frame.
 Three rules this file keeps.
 
 1. **Nothing heavy at module level.** torch, transformers and NanoJev are all behind
-   `_ensure_loaded`, which only `act` calls, so importing this module costs numpy.
+   `_ensure_loaded`, which only `act` (or `load`) calls, so importing this module costs numpy.
 2. **NanoJev's `scripts/` goes on `sys.path` before `import predict_toy_decisions`.** It is not a
    package -- no `pyproject.toml`, no `__init__.py`, sibling modules imported by bare name -- so
-   it is pinned in `robojev/trainer/nanojev.json` and cloned into `$ROBOJEV_HOME/src/`.
+   it is pinned in `robojev/trainer/nanojev.json` and found by `upstream_dir()`.
 3. **CUDA is hard-required by upstream and there is no CPU path.** `DecisionPredictor.__init__`
    raises on a non-CUDA device and again on a device without bf16, and the fp32 parameters are
    ~2.4 GB resident. `describe()` says so, and `describe()` itself deliberately loads nothing.
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
+import os
 import pathlib
 import sys
+from typing import Callable
 
 import numpy as np
 
 from robojev import episode as episode_mod
 from robojev import grounding as grounding_mod
 from robojev import jev_api, registry, runtime
-from robojev import expert as expert_mod
 from robojev.compose import MEASURED_STEPS, calibrate, chunk as chunk_v2, saturates, select
 from robojev.questions import (
     ACTIVE_QIDS,
@@ -77,9 +77,6 @@ BATCH_QUESTIONS = 0
 
 DEFAULT_SELECTION = "argmax"
 
-#: The scripted policy has no weights, so its "revision" is this file's behaviour.
-EXPERT_REVISION = "scripted-v2"
-
 #: Bytes of `best.safetensors` above which the parameters are stored in bf16 rather than fp32.
 #:
 #: Upstream loads the weights as fp32 whatever `precision` says, and `bf16` is only an autocast
@@ -108,8 +105,6 @@ GROUNDING_MIN_P: float = 0.5
 GROUND_MODES: tuple[str, ...] = ("rule", "forward")
 DEFAULT_GROUND: str = "rule"
 
-#: The three engines, as `build()` spells them.
-ENGINES: tuple[str, ...] = ("expert", "model", "jev")
 
 
 class PolicyError(RuntimeError):
@@ -225,7 +220,7 @@ def _choice(qid: str, value) -> str:
 # ----------------------------------------------------------------------------------- the base
 
 class Policy:
-    """What the episode loop needs, and what all three engines have.
+    """What the episode loop needs, and what every engine has.
 
     Subclasses fill `describe`, `reset` and `act`. `protocol()` is derived from `describe()`, so
     a policy states how it wants to be run in one place and the loop obeys it.
@@ -249,7 +244,7 @@ class Policy:
         raise NotImplementedError                                 # pragma: no cover - abstract
 
     def close(self) -> None:
-        """Release whatever the engine holds. Nothing, for the scripted one."""
+        """Release whatever the engine holds."""
 
     def protocol(self, max_steps: int | None = None) -> episode_mod.Protocol:
         cap = (max_steps if max_steps is not None
@@ -293,199 +288,7 @@ class Policy:
         tracker.source = None
 
 
-# ------------------------------------------------------------------------- the scripted expert
-
-class ExpertPolicy(Policy):
-    """The scripted expert answering the ten questions, with hard 0/1 distributions.
-
-    It does not *have* a belief about `move_z`, it has an answer, and a fabricated 0.85 would be a
-    number a reader could mistake for confidence. The softened target exists for the training arm
-    (`rollout.RolloutConfig.soft_targets`) and not here.
-
-    The tracker is here even though the expert does not read it back: the baseline and the model
-    have to be comparable, and anything reading `meta.state` off one run and off the other should
-    be reading the same kind of text about the same scene.
-    """
-
-    wait_steps = 0
-
-    def __init__(self, suite: str = "libero_spatial", seed: int = 7,
-                 selection: str = DEFAULT_SELECTION, revision: str | None = None):
-        self.suite = suite
-        self.seed = int(seed)
-        # Validated at construction: a typo in the mode should fail the run, not the tenth step.
-        parse_selection(selection)
-        self.selection = selection
-        self.revision = revision or EXPERT_REVISION
-        self.instruction = ""
-        self.tracker = self._new_tracker()
-        self.phase = expert_mod.new_phase()
-        self.released = False
-        self.rng = np.random.default_rng(self.seed)
-
-    # -- the protocol ----------------------------------------------------------------------
-
-    def describe(self) -> dict:
-        mode, _ = parse_selection(self.selection)
-        return {
-            "policy": "expert",
-            "family": self.family,
-            "checkpoint": {"repo": None, "revision": self.revision},
-            "questions": _questions_for_describe(v2_questions_block(ACTIVE_QIDS)),
-            "questions_version": QUESTION_SET_VERSION,
-            "protocol": {
-                "wait_steps": self.wait_steps,
-                "max_steps": dict(episode_mod.UPSTREAM_MAX_STEPS),
-                "seed": self.seed,
-                "chunk_size": CHUNK_STEPS, "execute_steps": CHUNK_STEPS,
-                "action_dim": ACTION_DIM,
-                "family": self.family,
-                "privileged_state": True,
-                "selection": self.selection,
-                "questions_version": QUESTION_SET_VERSION,
-                "questions": v2_questions_block(ACTIVE_QIDS),
-                "delta_t": expert_mod.EXPERT_DELTA_T,
-                "delta_r": expert_mod.EXPERT_DELTA_R,
-                "cm_per_unit": MEASURED_STEPS.cm_per_unit,
-                "step_sizes_cm": dict(MEASURED_STEPS.cm),
-                "memory": self.tracker.settings(),
-                "ground": {"mode": "rule", "order": ["rule", "scene_roles"]},
-            },
-            "versions": {"policy_repo": "none", "numpy": np.__version__},
-            # Deterministic under argmax: same state, same answer, no model and no sampling.
-            "nondeterminism": [] if mode == "argmax" else [
-                f"selection {self.selection}: each group is drawn from its distribution with a "
-                f"generator seeded from the run seed ({self.seed})"
-            ],
-        }
-
-    def reset(self, instruction: str) -> None:
-        self.instruction = instruction
-        self.rng = np.random.default_rng(self.seed)
-        self._reset_tracker(self.tracker, instruction)
-        self.phase = expert_mod.new_phase()
-        self.released = False
-
-    # -- the decision ----------------------------------------------------------------------
-
-    def act(self, obs: dict, overrides: dict | None = None, selection: str | None = None):
-        """`([5, 7], decisions)`.
-
-        The three-call order the shared renderer requires -- `observe`, render, `answer` -- and
-        for the same reason: `observe` closes out the previous decision, so the `Last 3` block's
-        effect column is a difference between two *observed* states rather than a restatement of
-        what was commanded.
-
-        The action is composed with the step sizes the expert was measured with
-        (`MEASURED_STEPS`, δ_t = 1.0). Composing these answers at the demonstrations' 0.3536 would
-        execute a fifth of every move they mean, which is the measured reason an episode at the
-        demonstrations' δ ran out of horizon.
-        """
-        privileged = self._privileged(obs)
-        state8 = np.asarray(obs["state"], dtype=np.float64).reshape(-1)
-
-        grounding = None
-        if (not (self.tracker.target in privileged and self.tracker.destination in privileged)
-                or self.tracker.needs_regrounding()):
-            grounding = self._ground(privileged, state8)
-
-        self.tracker.observe(step=self.tracker.decisions * CHUNK_STEPS, proprio=state8,
-                             objects=privileged, released=self.released)
-        answers, self.phase, meta = expert_mod.answers_v2(
-            state8, privileged, self.instruction, self.phase,
-            delta_t=expert_mod.EXPERT_DELTA_T,
-        )
-        # `roles.phase`, which the tracker delegates its stage to, has no `retreat`: a released
-        # object with the fingers open is a stage of its own and only the decider that opened them
-        # knows it happened. Recorded after the decision, so it colours the *next* state.
-        self.released = self.released or meta["phase"] in ("release", "retreat", "done")
-
-        overridden: list[str] = []
-        for qid, forced in (overrides or {}).items():
-            if qid not in ACTIVE_QIDS:
-                raise PolicyError(
-                    f"override for {qid!r}: not one of this question set's {list(ACTIVE_QIDS)}")
-            value = _override(qid, forced, v2_candidates(qid))
-            answers[qid] = (value == "true") if qid == "grip" else value
-            overridden.append(qid)
-
-        meta["state"] = serialise_v2(state8, privileged, self.instruction, self.tracker,
-                                     annotate=self.tracker.annotate)
-        meta["step"] = self.tracker.decisions
-        meta["overridden"] = overridden
-        meta["selection"] = "argmax"
-        meta["questions_version"] = QUESTION_SET_VERSION
-        meta["latched"] = bool(self.phase.get("rim_axis") is not None)
-        meta["released"] = bool(self.released)
-        waypoint = self.tracker.waypoint
-        meta["waypoint"] = None if waypoint is None else waypoint.label
-        meta["subgoal"] = self.tracker.subgoal
-        meta["substage"] = self.tracker.substage
-        meta["grounding"] = grounding
-        meta["destination"] = self.tracker.destination
-        meta["target_rule"] = self.tracker.source
-        meta["step_sizes_cm"] = dict(MEASURED_STEPS.cm)
-        # `offset_cm` is the offset to the point the **expert** is steering to and `waypoint_cm`
-        # the one the **state** names, and they are reported separately because they are not
-        # always the same point: the approach flies to a hover 8 cm above the rim before it
-        # descends and the tracker's six subgoals have no name for that sub-stage.
-        row_offsets = self.tracker.last_row.waypoint_cm
-        meta["waypoint_cm"] = None if row_offsets is None else [float(v) for v in row_offsets]
-        self.tracker.answer(answers)
-
-        decisions = {
-            qid: {
-                "probabilities": {c: (1.0 if c == _choice(qid, answers[qid]) else 0.0)
-                                  for c in v2_candidates(qid)},
-                "choice": _choice(qid, answers[qid]),
-                "overridden": qid in overridden,
-            }
-            for qid in ACTIVE_QIDS
-        }
-        decisions["meta"] = meta
-        return chunk_v2(answers, MEASURED_STEPS, CHUNK_STEPS), decisions
-
-    def _ground(self, privileged: dict, state8) -> dict:
-        """Commit `target`/`destination` by the **text rule** the learned policy commits with.
-
-        The same function on the same request: `grounding.grounding_request` renders the scene in
-        the camera frame the sentences are written in and `grounding.resolve_request` reads the
-        relation words back out of it (610/610 `target`, 515/520 `destination`). There is no
-        forward to run here -- this policy has no weights -- so what a baseline run shows is the
-        rule's answer and nothing else, which is exactly what `ModelPolicy(ground="rule")` commits.
-
-        `scene_roles` remains the fallback for a sentence the text rule cannot settle: it is the
-        geometric rule the expert steers by, and it always answers.
-        """
-        request = grounding_mod.grounding_request(self.instruction, privileged)
-        names = grounding_mod.grounding_names(privileged)
-        picked = grounding_mod.resolve_request(request)
-        roles, sources, out = None, {}, {}
-        for qid in ("target", "destination"):
-            sid = picked.get(qid)
-            if sid is not None and names.get(sid) in privileged:
-                out[qid], sources[qid] = names[sid], "rule"
-                continue
-            if roles is None:
-                roles = _scene_roles(privileged, self.instruction, state8[0:3])
-            out[qid], sources[qid] = roles[qid], "scene_roles"
-        chosen = set(sources.values())
-        source = chosen.pop() if len(chosen) == 1 else "mixed"
-        step = self.tracker.decisions * CHUNK_STEPS
-        regrounded = self.tracker.target is not None
-        self.tracker.commit(out["target"], out["destination"], step=step, source=source)
-        return {
-            "mode": "rule",
-            "source": source,
-            "sources": sources,
-            "target": out["target"],
-            "destination": out["destination"],
-            "model": None,
-            "model_agrees": None,
-            "regrounded": bool(regrounded),
-            "decision": self.tracker.decisions,
-        }
-
+# ----------------------------------------------------------------------------- shared helpers
 
 def _scene_roles(privileged: dict, instruction: str, eef) -> dict:
     """`roles.scene_roles` with this module's error type on the one failure it raises."""
@@ -650,7 +453,7 @@ class ModelPolicy(Policy):
                     f"the state text the model reads.")
         # The latch guard, always on. It is not a hand-tuned threshold on a probability: it
         # applies a change of the fingers only in a sub-goal whose own plan makes that change. An
-        # unguarded latch takes the expert from 19/20 to 7/20 at 10 % answer corruption.
+        # unguarded latch takes a label rollout from 19/20 to 7/20 at 10 % answer corruption.
         self._latch = self._tracker.latch
         self.rho = None
 
@@ -745,6 +548,11 @@ class ModelPolicy(Policy):
         if self.bf16_weights:
             _cast_to_bf16(self._engine)
         return self._engine
+
+    def load(self) -> None:
+        """Load the weights now rather than at the first `act`. A model server does this at
+        startup, so a checkpoint that cannot be loaded fails before the first episode does."""
+        self._ensure_loaded()
 
     def close(self) -> None:
         self._engine = None
@@ -1063,13 +871,17 @@ class ModelPolicy(Policy):
 
 # ------------------------------------------------------------------------- the pinned upstream
 
+#: Names a NanoJev checkout (its root, or its `scripts/`) directly, ahead of every default place.
+NANOJEV_ENV = "ROBOJEV_NANOJEV"
+
+
 def _pin() -> dict:
     url, commit, subdir = runtime.nanojev_pin(runtime.trainer())
     return {"url": url, "commit": commit, "subdir": subdir}
 
 
 def clone_root() -> pathlib.Path:
-    """`$ROBOJEV_HOME/src/nanojev@<commit12>` -- where the pinned clone lives.
+    """`$ROBOJEV_HOME/src/nanojev@<commit12>` -- where the pinned clone is put.
 
     Resolved per call rather than at import, because the root is an environment variable and a
     module-level constant would freeze whatever it happened to be at first import.
@@ -1079,9 +891,105 @@ def clone_root() -> pathlib.Path:
     return home.src_dir() / f"nanojev@{_pin()['commit'][:12]}"
 
 
+def upstream_candidates() -> list[pathlib.Path]:
+    """Every `scripts/` directory NanoJev's predictor is looked for in, in order.
+
+    `$ROBOJEV_NANOJEV` (a checkout's root or its `scripts/`), then the pinned clone under each of
+    `home.src_dirs()` -- which, with no root named, includes the one an earlier install cloned.
+    """
+    from robojev import home
+
+    pin = _pin()
+    found: list[pathlib.Path] = []
+    named = os.environ.get(NANOJEV_ENV)
+    if named:
+        root = pathlib.Path(named).expanduser()
+        found += [root / pin["subdir"], root]
+    found += [src / f"nanojev@{pin['commit'][:12]}" / pin["subdir"] for src in home.src_dirs()]
+    return found
+
+
 def upstream_dir() -> pathlib.Path:
-    """The directory to put on `sys.path`: the clone's `scripts/`."""
+    """The directory to put on `sys.path`: the first candidate that holds the predictor, or the
+    pinned clone's `scripts/` (where `robojev train --build-env` puts it) when none does."""
+    for candidate in upstream_candidates():
+        if (candidate / PREDICTOR).is_file():
+            return candidate
     return clone_root() / _pin()["subdir"]
+
+
+#: The one NanoJev file the local engine imports.
+PREDICTOR = "predict_toy_decisions.py"
+
+
+# -------------------------------------------------------------------------------- the registry
+
+@dataclasses.dataclass(frozen=True)
+class Engine:
+    """One model family: how to build it, and what an interpreter needs before it can.
+
+    `name` is what a record's `policy` field says and what `--engine` takes; `label` is what a
+    page calls it. `local` is True for an engine whose weights are a directory on this machine --
+    those are the ones a model server can serve out of process (`robojev.model_server`).
+    `available()` says whether *this* interpreter can build it, and `needs` says what is missing
+    when it cannot. A new model family is one more `register(Engine(...))`.
+    """
+
+    name: str
+    label: str
+    build: Callable[..., "Policy"]
+    local: bool
+    needs: str
+    available: Callable[[], bool]
+
+
+ENGINES: dict[str, Engine] = {}
+
+#: The engine a bare `robojev run` / `robojev console` means.
+DEFAULT_ENGINE = "robojev"
+
+
+def register(engine: Engine) -> Engine:
+    ENGINES[engine.name] = engine
+    return engine
+
+
+def _have(module: str) -> bool:
+    import importlib.util
+
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _build_robojev(suite: str, checkpoint: str | None = None, **kw) -> "ModelPolicy":
+    directory = pathlib.Path(checkpoint) if checkpoint else default_checkpoint(suite)
+    return ModelPolicy(suite, str(directory), **kw)
+
+
+def _build_jev(suite: str, checkpoint: str | None = None, *, bf16_weights=None,
+               **kw) -> "ModelPolicy":
+    return ModelPolicy(suite, checkpoint or jev_api.DEFAULT_MODEL, api=jev_api.PROVIDER, **kw)
+
+
+register(Engine(
+    name="robojev", label="RoboJEV", build=_build_robojev, local=True,
+    needs="a local checkpoint needs torch and NanoJev's predictor: pip install 'robojev[model]', "
+          "or serve it from an interpreter that has them with --model-python",
+    available=lambda: _have("torch")))
+register(Engine(
+    name="jev", label="Jev", build=_build_jev, local=False,
+    needs="the hosted model needs $JEV_API_KEY, and every decision it answers is a paid request",
+    available=lambda: bool(os.environ.get("JEV_API_KEY"))))
+
+
+def engine(name: str) -> Engine:
+    """The registered engine called `name`, or a `PolicyError` naming the ones there are."""
+    found = ENGINES.get(name)
+    if found is None:
+        raise PolicyError(f"unknown engine {name!r}; expected one of {list(ENGINES)}")
+    return found
 
 
 # -------------------------------------------------------------------------------- the factory
@@ -1091,26 +999,33 @@ def default_checkpoint(suite: str, policy: str = "robojev") -> pathlib.Path:
     return runtime.local_checkpoint_dir(policy, suite)
 
 
-def build(engine: str = "expert", suite: str = "libero_spatial", *, checkpoint: str | None = None,
-          seed: int = 7, task_index: int = 0, selection: str = DEFAULT_SELECTION,
-          temperature: float = 1.0, ground: str = DEFAULT_GROUND,
-          revision: str | None = None, bf16_weights: bool | None = None) -> Policy:
-    """One policy by name: `expert`, `model` (a local checkpoint) or `jev` (the hosted model)."""
-    if engine == "expert":
-        return ExpertPolicy(suite, seed=seed, selection=selection, revision=revision)
-    if engine == "model":
-        directory = pathlib.Path(checkpoint) if checkpoint else default_checkpoint(suite)
-        return ModelPolicy(suite, str(directory), revision=revision, seed=seed,
-                           task_index=task_index, selection=selection, temperature=temperature,
-                           bf16_weights=bf16_weights, ground=ground)
-    if engine == "jev":
-        return ModelPolicy(suite, checkpoint or jev_api.DEFAULT_MODEL, revision=revision,
-                           seed=seed, task_index=task_index, selection=selection,
-                           temperature=temperature, ground=ground, api=jev_api.PROVIDER)
-    raise PolicyError(f"unknown engine {engine!r}; expected one of {list(ENGINES)}")
+def resolve_checkpoint(text: str | None, suite: str) -> pathlib.Path:
+    """A `--checkpoint` argument as a directory: a path as given, else a name under
+    `$ROBOJEV_HOME/checkpoints` (`robojev/libero_spatial`), else the suite's default."""
+    from robojev import home
+
+    if not text:
+        return default_checkpoint(suite)
+    given = pathlib.Path(text).expanduser()
+    if given.is_dir():
+        return given
+    named = home.checkpoints_dir() / text
+    return named if named.is_dir() else given
 
 
-__all__ = ["ACTION_DIM", "BF16_WEIGHTS_BYTES", "CHECKPOINT_META", "CHUNK_STEPS", "DEFAULT_GROUND",
-           "DEFAULT_SELECTION", "ENGINES", "EXPERT_REVISION", "GROUNDING_MIN_P", "GROUND_MODES",
-           "ExpertPolicy", "ModelPolicy", "Policy", "PolicyError", "build", "clone_root",
-           "default_checkpoint", "parse_selection", "selection_text", "upstream_dir"]
+def build(engine_name: str = DEFAULT_ENGINE, suite: str = "libero_spatial", *,
+          checkpoint: str | None = None, seed: int = 7, task_index: int = 0,
+          selection: str = DEFAULT_SELECTION, temperature: float = 1.0,
+          ground: str = DEFAULT_GROUND, revision: str | None = None,
+          bf16_weights: bool | None = None) -> Policy:
+    """One policy by engine name (`ENGINES`), in this process."""
+    return engine(engine_name).build(
+        suite, checkpoint, revision=revision, seed=seed, task_index=task_index,
+        selection=selection, temperature=temperature, bf16_weights=bf16_weights, ground=ground)
+
+
+__all__ = ["ACTION_DIM", "BF16_WEIGHTS_BYTES", "CHECKPOINT_META", "CHUNK_STEPS", "DEFAULT_ENGINE",
+           "DEFAULT_GROUND", "DEFAULT_SELECTION", "ENGINES", "Engine", "GROUNDING_MIN_P",
+           "GROUND_MODES", "ModelPolicy", "NANOJEV_ENV", "PREDICTOR", "Policy", "PolicyError",
+           "build", "clone_root", "default_checkpoint", "engine", "parse_selection", "register",
+           "resolve_checkpoint", "selection_text", "upstream_candidates", "upstream_dir"]

@@ -1,50 +1,31 @@
-"""A scripted expert that *finishes* LIBERO-Spatial pick-and-place in the decision vocabulary.
+"""Pick-and-place, as a plan: the stage table, the grasp candidates and the geometry they read.
 
-Why this exists. The latest NanoJev took ViZDoom Basic from 56/128 to 128/128 with the state text
-byte-identical, purely by changing the **label source** to one authoritative expert action per
-decision (docs/DESIGN.md). Our labels come from human
-demonstrations replayed at 20 Hz, and a teleoperator's derivative is not a function of the scene:
-two decision points 0.25 s apart in the same reach can carry different `translate` golds. This
-module is the other kind of source -- a controller that is *right by construction* at every state,
-including the states a half-trained model wanders into, which is what DAgger needs and what a
-demonstration cannot give.
+This is the **planner** half of the NanoJev division of labour. Code plans and the model judges:
+for every decision this module proposes one waypoint -- the point the current sub-stage steers
+to -- together with the sub-stage, the ordered grasp candidates round the target's rim and
+whether the target is `held`. `robojev.state` prints all of that as text, the model answers ten
+questions about the text, and every training label is read back off the printed numbers
+(`robojev.compose.labels_from_waypoint`, `robojev.parse`). Nothing here answers a question.
 
-It is a **pure function** of the privileged state plus its own small phase carry:
+The plan is a pure function of the privileged state plus its own small JSON-able carry:
 
-    choices, phase, meta = decide(state8, privileged, instruction, phase)
+    goal, carry, meta = plan(state8, privileged, instruction, carry)
 
-`choices` is one answer per question of the per-axis set (`AXISWISE_CANDIDATES`) -- a direction
-and a step size per world axis, `yaw`, `rim` and a boolean `grip` -- which `compose_axiswise`
-turns into the `(7,)` action the answer is held for. No randomness, no I/O, no simulator: the same
-arguments always give the same answer, which is what makes a relabelling reproducible.
+It is written against `robojev.planner.executor`: nine stages as data (`PICK_AND_PLACE`), each
+with its own goal, its own arrival test and where it goes when it arrives, is blocked or loses
+its outcome. What makes it finish the task rather than merely reach the bowl is measured and
+recorded beside each constant (docs/DESIGN.md):
 
-How it differs from the `heuristic` recipe (`robojev/policy.py`), which reaches
-the bowl in 17/20 episodes and lifts it in 0/20 (note `2026-09-20-stage9-robojev-run3-closed-
-loop.md`):
+1. **The grasp is the rim, not the centre** (`RIM_RADIUS`, `GRASP_DZ`).
+2. **The fingers close radially** at whatever rim point the candidate in force stands on, so a
+   candidate off the wrist's own axis pays for itself in wrist yaw (`wrist_yaw_error`).
+3. **The fingers are waited for** (`SETTLE_DECISIONS`) and the grasp is **checked** (`held`): a
+   grasp that caught nothing takes the next of `GRASP_CANDIDATES`.
+4. **The scene's furniture is measured**, so a rim direction a drawer wall blocks is tried last
+   (`candidate_turns`, `scene.clearance`).
 
-1. **It grasps the rim, not the centre.** Note docs/DESIGN.md measured
-   every demonstration grasping 5-6 cm off centre horizontally and 2-5 cm above the reported pose;
-   a centre waypoint holds 0.16-0.74 against the demo pose's 0.73-0.93. `rim_point` is that note's
-   own recommended waypoint, `bowl_xy + r * normalize(eef_xy - bowl_xy)`.
-2. **Its step sizes are calibrated against what the arm executes, not what it commands.** The two
-   halves of this are `EXECUTED_COARSE_PER_DELTA_T` (the arm executes about a fifth of the
-   translation it is commanded, so every threshold written in the composer's units is five times
-   too wide) and `axis_answer` (the step size is chosen from the error on the axis being *moved*,
-   not from the norm of the 3-d error, which would take a whole large step along a small
-   component and oscillate). Between them they are most of the difference between the heuristic's
-   0/20 and the table in the note.
-3. **It waits for the fingers.** `grip` going true is a command, not a grasp: the Panda's fingers
-   take about `SETTLE_DECISIONS` chunks to close on a rim. Lifting on the next decision tears the
-   bowl out from between them.
-4. **It checks and retries.** Whether the bowl came with the hand is observable (`skill.held`:
-   the fingers are shut and the bowl has not moved relative to them since the grasp), so a grasp
-   that caught nothing is noticed rather than carried to the plate: the expert reopens, backs off
-   to the hover and comes down on the next of `GRASP_CANDIDATES` -- the other end of the rim axis,
-   then the next grasp height.
-
-The target/destination rule is *not* re-invented here: it is `robojev.roles.scene_roles`,
-the same function the harvester, the `heuristic` recipe and the RoboJEV server all read an
-instruction with, so nothing can name a different bowl from the same sentence.
+The target/destination rule is `robojev.roles.scene_roles`, the same function a served policy
+reads an instruction with, so nothing can name a different bowl from the same sentence.
 """
 from __future__ import annotations
 
@@ -54,93 +35,14 @@ from typing import Any
 
 import numpy as np
 
-from robojev import roles as roles_mod, scene, skill
+from robojev import roles as roles_mod, scene
+from robojev.planner import executor
 
-# ------------------------------------------------------------------------ the loop's own numbers
-
-#: An answer is held for this many control steps. `v2.compose.CHUNK_STEPS` is the same number
-#: read from the other side of the fine-tune, and `test_expert.py` pins the two together.
-CHUNK_STEPS: int = 5
-
-#: **How far a coarse chunk actually moves the hand, in metres per unit of δ_t.** The one
-#: measurement this whole controller is built on, and it is not the number the composer's units
-#: suggest. `OSC_POSE` maps a full-scale component onto 5 cm *commanded* per control step, so five
-#: of them command `0.25 × δ_t` metres -- but robosuite re-sets the OSC goal to `current + delta`
-#: every step and the arm's impedance only closes a fifth of that gap in one 20 Hz step, so what
-#: it *executes* is a fifth of what it asks for.
-#:
-#: Measured (`scratch/stage9-expert/calibrate.py`, LIBERO-Spatial task 0 from its settled reset
-#: pose, five identical steps per cell, metres travelled):
-#:
-#: | δ_t | ±x | ±y | ±z | (coarse) | ±x | ±y | ±z | (fine) |
-#: |---|---|---|---|---|---|---|---|---|
-#: | 0.3536 | 0.0156 | 0.0190 | 0.0193 | | 0.0051 | 0.0062 | 0.0063 | |
-#: | 0.50 | 0.0222 | 0.0270 | 0.0274 | | 0.0073 | 0.0088 | 0.0090 | |
-#: | 0.75 | 0.0335 | 0.0405 | 0.0411 | | 0.0110 | 0.0134 | 0.0136 | |
-#: | 1.00 | 0.0449 | 0.0541 | 0.0549 | | 0.0147 | 0.0179 | 0.0182 | |
-#:
-#: Exactly linear in δ_t, and `fine` is exactly a third of `coarse` at every δ_t -- the composer's
-#: `FINE_FRACTION` survives the controller. x is ~17 % slower than y and z (the Panda's reach
-#: direction), which one scalar cannot express; 0.050 is the mean and the error it makes is
-#: absorbed by the next decision, because every threshold below is re-read from the current state.
-EXECUTED_COARSE_PER_DELTA_T: float = 0.050
-
-#: **δ_t = 1.0, and the demonstrations' 0.3536 is what kept the `heuristic` recipe at 0/20.**
-#: The manifest's δ_t is the *demonstrations'* median moving step, which is the right number for
-#: labelling what a human did and the wrong one for a controller that gets 44 decisions: at
-#: 0.3536 a coarse chunk executes 1.8 cm, and one LIBERO-Spatial episode is about 0.40 m of
-#: axis-wise reach, 0.10 m of lift and 0.25 m of carry -- 40+ decisions before the gripper has
-#: closed. Measured on task 0 init 0: the hand needed 24 of the 44 decisions to arrive over the
-#: rim and the episode ended in `approach`, which is exactly the note's "closed on the bowl at
-#: step 175, too late to lift" failure.
-#:
-#: At 1.0 a coarse chunk executes ~5 cm and a fine one ~1.7 cm, so the three answers tile the line
-#: at 0.8 cm / 2.5 cm (`_thresholds`) -- finer than the 1.9-8.1 cm spread the demonstrations' own
-#: grasps sit in (feasibility note), so the resolution lost is below the resolution the grasp
-#: needs. **Consequence for the training run:** these labels are answers about a 5 cm step. A
-#: server composing them with the manifest's 0.3536 would execute a fifth of every move the expert
-#: meant, so a checkpoint trained on expert labels has to be served with `delta_t = 1.0` in its
-#: `robojev.json`. That is the whole of what changing the label source costs downstream.
-EXPERT_DELTA_T: float = 1.0
-#: δ_r as the manifest carries it, for the **grouped** (v1) composer, which is the only thing that
-#: still scales a rotation by it. The per-axis composer below uses the measured
-#: `EXECUTED_DEG_PER_UNIT` instead, for the reason `EXECUTED_COARSE_PER_DELTA_T` exists: a
-#: rotation command executes a fraction of what it asks for, and a threshold written in commanded
-#: units is a controller that stops short.
-EXPERT_DELTA_R: float = 0.05785714285714285
-
-#: **Degrees of wrist yaw the arm actually executes per normalised unit, per decision.** The
-#: rotation half of `EXECUTED_COARSE_PER_DELTA_T`, and measured the same way
-#: (`scratch/v2-drawer/calib_yaw.py`: five identical control steps from the settled reset pose,
-#: the change in the gripper's own closing-axis angle, repeated eight times):
-#:
-#: | command | executed deg / decision | eef drift over 8 decisions |
-#: |---|---|---|
-#: | 0.105 | 3.6 | 1 mm |
-#: | 0.25 | 8.0 | 3 mm |
-#: | **0.50** | **14.1** | 8 mm |
-#: | 1.00 | 18.9 | **18 cm** -- the OSC drags the hand across the table; unusable |
-#:
-#: So the wrist turns ~28 degrees per unit per decision, not the 143 the commanded scale
-#: (`5 steps x 0.5 rad`) suggests. **This is why the wrist was unaffordable**: the note's
-#: "δ_r buys 8.3 degrees per decision" was a *commanded* figure, the served `yaw` size executed
-#: 3.6, and a right angle cost 25 decisions of a 44-decision horizon. At the measured scale a
-#: right angle costs 6, which is what makes `yaw` a question worth asking (note
-#: docs/DESIGN.md).
-EXECUTED_DEG_PER_UNIT: float = 28.0
-
-#: What each step size turns the wrist by, in **degrees executed per decision** -- the rotation
-#: counterpart of `AXISWISE_SCALE`, and the numbers `v2.compose.YAW_*_DEG` are. One decision of
-#: `large` is a sixth of a right angle; the wrist is held to the same size as the hand's largest
-#: translation, because it is one hand.
-YAW_SCALE: dict[str, float] = {"large": 15.0, "medium": 5.0, "small": 1.5}
-
+# ----------------------------------------------------------------------------- the tolerances
 #: How far the wrist may be from the angle the grasp asks for before the plan turns it, in
-#: degrees. `robojev.compose.DEFAULT_YAW_TOLERANCE_DEG`, copied here for the reason the
-#: composer's other constants are (this module must import while the package is being edited) and
-#: pinned against it in `test_expert.py`.
+#: degrees. `robojev.compose.DEFAULT_YAW_TOLERANCE_DEG` is this number, imported.
 #:
-#: **Eight degrees, and it is `YAW_SCALE["large"]` that sets it**: the wrist has one speed, so a
+#: **Eight degrees, and it is `compose.YAW_SCALE["large"]` that sets it**: the wrist has one speed, so a
 #: tolerance below half a step is a wrist that steps across the band and back for ever (15
 #: degrees of step against a 5-degree band: +7 -> -8 -> +7). At 8 an error inside one step lands
 #: inside the tolerance and an error outside it shrinks by 15 degrees a decision. It is also well
@@ -149,7 +51,7 @@ YAW_SCALE: dict[str, float] = {"large": 15.0, "medium": 5.0, "small": 1.5}
 #: own grasps sit 15-30 degrees off radial.
 YAW_TOL_DEG: float = 8.0
 
-# ----------------------------------------------------------------------------- the controller
+# ----------------------------------------------------------------------------- the geometry
 # Every length is metres in LIBERO's world frame: the frame `obs["state"][0:3]` (the grip site,
 # i.e. the point between the fingertips) and `privileged[name]["pos"]` (a body origin) share.
 
@@ -168,16 +70,6 @@ GRASP_DZ: float = 0.025
 #: How far above the grasp point the approach flies before it descends. Clears the ramekin, the
 #: cookie box and the plate, which are all shorter than this.
 HOVER: float = 0.08
-#: Where the three step sizes hand over to each other, as fractions of what they execute. The
-#: textbook answer is 0.5 and 0.5 -- hand over exactly half way, so the residual after a step is
-#: never more than half the step. Both are **above** a half here because the arm does not stop when
-#: the command does: an OSC goal set five times in a row leaves the hand moving, and a chunk
-#: commanded `-z` is measurably still drifting `+y` from the chunk before it. Measured on task 0:
-#: at 0.5/0.5 the approach overshot the rim in y and spent four decisions oscillating across it.
-#: Preferring the smaller step over a wider band costs one extra decision per reach and removes
-#: the oscillation, which cost four.
-FINE_BAND: float = 0.7
-HOLD_BAND: float = 0.6
 
 #: Horizontal tolerance on the rim point, in the approach and at the release, and the vertical one
 #: on the grasp height. Both are a little **above** `_thresholds`' hold threshold (0.8 cm at
@@ -191,7 +83,7 @@ SETTLE_DECISIONS: int = 3
 #: How far the hand lifts above the grasp point before carrying.
 LIFT: float = 0.10
 #: How far the target may drift from where it sat in the fingers before the plan calls it dropped
-#: -- the tolerance of the one `held` test (`skill.held`), used by the lift, the carry and the
+#: -- the tolerance of the one `held` test (`executor.held`), used by the lift, the carry and the
 #: tracker's printed `holding` alike. Generous on purpose: a carried bowl swings a centimetre or
 #: two in the fingers, and the cost of a false "dropped" (reopening over the middle of the table)
 #: is much higher than of a late one.
@@ -201,7 +93,7 @@ DROP_TOL: float = 0.04
 #: import while the package around it is being edited) and pinned against it in `test_expert.py`.
 #: It is a *shut* test and not a *holding* one: measured over the deployed run's own states, a
 #: hand carrying a bowl reports 0.2-2.0 cm of gap and a hand that shut on air reports 0.1 cm, so
-#: the width says whether the fingers closed and only `skill.held` says on what.
+#: the width says whether the fingers closed and only `executor.held` says on what.
 CLOSED_WIDTH: float = 0.04
 #: How high above the destination's pose the bowl is carried.
 CARRY_CLEARANCE: float = 0.14
@@ -436,8 +328,10 @@ def candidate_turns(target, objects: dict, axis, radius: float,
     return tuple(sorted(declared, key=lambda t: (not fits(t), declared.index(t))))
 
 
-class ExpertError(RuntimeError):
-    """The expert was asked for a decision it cannot make: no privileged state, an empty scene."""
+
+class PlannerError(RuntimeError):
+    """The planner was asked for a waypoint it cannot plan: no privileged state, an empty scene,
+    a carry naming a stage this plan has never had."""
 
 
 # ------------------------------------------------------------------------------ per-task tuning
@@ -552,7 +446,8 @@ def resolve_roles(objects: dict, instruction: str, eef) -> dict:
     try:
         return roles_mod.scene_roles(objects, instruction, eef)
     except ValueError as exc:        # an empty scene: the rule's own error, in this module's type
-        raise ExpertError(str(exc)) from exc
+        raise PlannerError(str(exc)) from exc
+
 
 
 def _pos(objects: dict, name: str) -> np.ndarray:
@@ -561,12 +456,12 @@ def _pos(objects: dict, name: str) -> np.ndarray:
 
 # ------------------------------------------------------------------ the task, as data
 #
-# Pick-and-place is a `robojev.skill.Plan`: nine stages, each a `Stage` carrying its own
+# Pick-and-place is a `robojev.executor.Plan`: nine stages, each a `Stage` carrying its own
 # goal, its own arrival test and where it goes when it arrives, is blocked or loses its outcome.
 # **No branch of `decide` names a stage.** What used to be five per-stage rules -- a patience for
 # every phase, a second patience for the descent, a third for the lift, a rim-flip counter and a
 # retry table indexed by attempts -- is now one progress rule, one candidate list and one `held`,
-# all of them in `skill.step` and none of them here.
+# all of them in `executor.step` and none of them here.
 
 
 @dataclasses.dataclass(frozen=True)
@@ -644,23 +539,8 @@ def _side_word(direction) -> str:
     return "+y" if dy >= 0 else "-y"
 
 
-def rim_gold(rows) -> str:
-    """The `rim` answer the state's own block implies: **the first listed candidate that fits and
-    has not been tried**, and the first untried one when none of them fits.
 
-    One relation per line and no arg-max over a column (§2 principle 2): every row carries its
-    own verdict, and this reads them in order.
-    """
-    rows = list(rows)
-    if not rows:
-        return RIM_LETTERS[0]
-    for row in rows:
-        if row["fits"] and not row["tried"]:
-            return row["letter"]
-    for row in rows:
-        if not row["tried"]:
-            return row["letter"]
-    return rows[0]["letter"]
+
 
 
 def _hover(ctx: Ctx) -> np.ndarray:
@@ -738,7 +618,7 @@ def _up_and_away(ctx: Ctx) -> np.ndarray:
 #: What one degree of wrist is worth in the executor's one unit, metres of remaining travel.
 #: **A millimetre**, so a right angle of wrist counts as 9 cm of approach -- which is about what
 #: walking round the rim to the opposite side costs, and those two are exactly the alternatives
-#: the plan is choosing between. It has to be well above `skill.PROGRESS_EPS` per decision or a
+#: the plan is choosing between. It has to be well above `executor.PROGRESS_EPS` per decision or a
 #: turning wrist would read as a stalled one: at 15 degrees a decision the wrist closes 1.5 cm of
 #: it, five times the 0.3 cm the progress rule asks for.
 YAW_RESIDUAL_M_PER_DEG: float = 0.001
@@ -787,7 +667,7 @@ def _at_release_height(ctx: Ctx) -> bool:
 
 def _held(ctx: Ctx) -> bool:
     """The one `held`, for the lift's outcome, the carry's and the tracker's printed `holding`."""
-    return skill.held(ctx.closed, ctx.offset, ctx.reference, DROP_TOL)
+    return executor.held(ctx.closed, ctx.offset, ctx.reference, DROP_TOL)
 
 
 def _the_grasp_that_was_made(ctx: Ctx) -> dict:
@@ -839,7 +719,7 @@ def _choose_candidate(carry: dict, ctx: Ctx) -> int | None:
 
 #: Pick-and-place, whole. Read down the `on_done` column for a successful episode and across the
 #: `on_blocked`/`on_failed` ones for every way it recovers.
-PICK_AND_PLACE: skill.Plan = skill.Plan(
+PICK_AND_PLACE: executor.Plan = executor.Plan(
     stages=(
         # **The approach accepts the best pose it reached: blocked, it descends from where it
         # is.** Measured (docs/DESIGN.md §2): an approach that
@@ -850,25 +730,25 @@ PICK_AND_PLACE: skill.Plan = skill.Plan(
         # same x and y. Where a rim point really *is* unreachable, the descent is where that
         # shows (the stalled-descent note's own evidence), and the descent is what takes the next
         # candidate.
-        skill.Stage("approach", "reach", False, goal=_hover, residual=_wrist_residual,
-                    arrived=_over_the_rim, on_done="descend", on_blocked=skill.ACCEPT),
-        skill.Stage("descend", "reach", False, goal=_rim, arrived=_at_the_rim,
+        executor.Stage("approach", "reach", False, goal=_hover, residual=_wrist_residual,
+                    arrived=_over_the_rim, on_done="descend", on_blocked=executor.ACCEPT),
+        executor.Stage("descend", "reach", False, goal=_rim, arrived=_at_the_rim,
                     on_done="close", on_blocked="approach"),
         # Still, shut, and waiting for the fingers: `grip` going true is a command, not a grasp.
-        skill.Stage("close", "grasp", True, dwell=SETTLE_DECISIONS, on_done="lift",
+        executor.Stage("close", "grasp", True, dwell=SETTLE_DECISIONS, on_done="lift",
                     on_exit=_the_grasp_that_was_made),
-        skill.Stage("lift", "lift", True, goal=_clear_above, arrived=_clear_of_the_table,
+        executor.Stage("lift", "lift", True, goal=_clear_above, arrived=_clear_of_the_table,
                     check=_held, on_done="carry", on_blocked="approach", on_failed="approach"),
-        skill.Stage("carry", "carry", True, goal=_above_destination,
+        executor.Stage("carry", "carry", True, goal=_above_destination,
                     arrived=_over_the_destination, check=_held, on_done="lower",
                     on_failed="approach"),
-        skill.Stage("lower", "place", True, goal=_onto_destination, arrived=_at_release_height,
+        executor.Stage("lower", "place", True, goal=_onto_destination, arrived=_at_release_height,
                     on_done="release"),
-        skill.Stage("release", "place", False, dwell=RELEASE_DECISIONS, on_done="retreat"),
-        skill.Stage("retreat", "retreat", False, goal=_up_and_away, dwell=RETREAT_DECISIONS,
+        executor.Stage("release", "place", False, dwell=RELEASE_DECISIONS, on_done="retreat"),
+        executor.Stage("retreat", "retreat", False, goal=_up_and_away, dwell=RETREAT_DECISIONS,
                     on_done="done"),
         # The placement is made and LIBERO ends the episode on its own predicate.
-        skill.Stage("done", "retreat", False, on_done="done"),
+        executor.Stage("done", "retreat", False, on_done="done"),
     ),
     start="approach",
     candidates=len(GRASP_CANDIDATES),
@@ -888,7 +768,7 @@ PHASES: tuple[str, ...] = PICK_AND_PLACE.names
 def new_phase(roles: dict | None = None) -> dict:
     """The carry an episode starts with: nothing latched, nothing attempted.
 
-    `skill.new_carry`'s own fields (the stage, the progress, the candidate, the attempts) plus
+    `executor.new_carry`'s own fields (the stage, the progress, the candidate, the attempts) plus
     this task's three: the roles, the rim axis, and what the close recorded.
 
     `roles` pins `{"target", "destination"}` instead of reading them from the instruction. A
@@ -898,7 +778,7 @@ def new_phase(roles: dict | None = None) -> dict:
     expert both ways is what separates "the controller cannot do it" from "the controller was
     pointed at the wrong bowl" (see the note's table).
     """
-    return skill.new_carry(
+    return executor.new_carry(
         PICK_AND_PLACE,
         # Pinned, or latched at the first decision: the scene stops being static the moment the
         # grasp moves the target.
@@ -945,102 +825,88 @@ def with_executed(phase: dict | None, answers: dict | None, qids=None) -> dict |
     return {**phase, "chose": answers.get("rim")}
 
 
-def _yaw_answer(yaw_error: float) -> str:
-    """The `yaw` answer for a wrist alignment error: a sign against `YAW_TOL_DEG`, nothing else.
-
-    The same relation `v2.compose.labels_from_waypoint` applies to the number the state prints,
-    which is what makes the label recoverable from the text. The two spellings are the two
-    set: `+`, `-` or `hold`.
-    """
-    plus, minus = "+", "-"
-    if abs(float(yaw_error)) <= YAW_TOL_DEG:
-        return "hold"
-    return plus if yaw_error > 0 else minus
+#: `PHASES` -> `robojev.questions.SUBGOAL_CANDIDATES`, read off the stage table: each `Stage`
+#: carries the subgoal it belongs to, so a sub-stage cannot exist without one or be mapped to a
+#: second one somewhere else. `descend` is `reach` and not `grasp`: `close` is the decision that
+#: shuts the fingers, and a `descend` labelled `grasp` would teach the model to close a decision
+#: early, on the way down. `done` is `retreat` because there is no candidate for "the episode is
+#: over" -- LIBERO ends the episode on its own predicate and nothing is asked after it.
+SUBGOALS: dict[str, str] = PICK_AND_PLACE.subgoals
 
 
-def decide(
+
+def plan(
     state8,
     privileged: dict,
     instruction: str,
-    phase: dict | None = None,
+    carry: dict | None = None,
     *,
-    delta_t: float = EXPERT_DELTA_T,
     qids=None,
-) -> tuple[dict[str, Any], dict, dict]:
-    """One decision point: `(choices, next_phase, meta)`.
+) -> tuple[np.ndarray, dict, dict]:
+    """One decision point's plan: `(goal, next_carry, meta)`.
 
     `state8` is the environment's 8-d proprio vector (grip-site position, the end-effector's
-    axis-angle, the two finger joints); `privileged` is its
-    `{name: {"pos", "quat"}}`; `phase` is `new_phase()` at the start of an episode and the second
-    element of this function's own return after that.
+    axis-angle, the two finger joints); `privileged` is its `{name: {"pos", "quat"}}`; `carry` is
+    `new_phase()` at the start of an episode and the second element of this function's own return
+    after that.
 
-    The answers are the per-axis set (`AXISWISE_CANDIDATES`, composed by `compose_axiswise`):
-    one direction and one step size per world axis, plus `yaw`, `rim` and a boolean `grip`.
+    `goal` is the world point the current sub-stage steers to. **Nothing here answers a
+    question**: the tracker prints `goal - eef` as the waypoint offset, and every label is read
+    back off those printed numbers (`compose.labels_from_waypoint`). The planner proposes where
+    to go; the model decides how to move.
 
-    **The decision itself is three lines**: read the geometry, hand it to `skill.step` with
-    `PICK_AND_PLACE`, turn the offset to the goal it chose into an answer. The stage's own
-    `grip`, `goal`, `arrived`, `check` and where it goes next are in the table above; nothing
-    here branches on which stage it is.
-
-    Pure and total over its own carry: it reads nothing but its arguments, mutates none of them,
-    and every stage of the plan returns an answer -- an expert that can raise in the middle of a
-    relabelling is not a label source. It *does* raise on an input it cannot decide from at all
-    (no scene, a carry naming a stage this plan has never had), which is a different thing and
-    is what `ExpertError` is for.
+    Pure and total over its own carry: it reads nothing but its arguments and mutates none of
+    them. It raises `PlannerError` on an input it cannot plan from at all (no scene, a carry
+    naming a stage this plan has never had).
     """
     proprio = np.asarray(state8, dtype=np.float64).reshape(-1)
     if proprio.shape[0] < 3:
-        raise ExpertError(f"expected the 8-d proprio vector, got shape {proprio.shape}")
+        raise PlannerError(f"expected the 8-d proprio vector, got shape {proprio.shape}")
     if not privileged:
-        raise ExpertError("no privileged scene state: the expert decides from object poses")
+        raise PlannerError("no privileged scene state: the planner plans from object poses")
     eef = proprio[0:3]
-    phase = dict(new_phase() if phase is None else phase)
-    if phase["name"] not in PHASES:
-        raise ExpertError(f"the phase carry names {phase['name']!r}, which is not one of {PHASES}")
+    carry = dict(new_phase() if carry is None else carry)
+    if carry["name"] not in PHASES:
+        raise PlannerError(f"the carry names {carry['name']!r}, which is not one of {PHASES}")
     tune = tuning(instruction)
 
     # --- the roles. Latched at the first decision, because every rule `scene_roles` applies is a
-    # statement about where things are and carrying the target is the act of making it untrue
-    # (see `heuristic.latched_roles`). A latch naming an object the scene no longer has is
-    # dropped rather than trusted.
-    roles = phase.get("roles")
+    # statement about where things are and carrying the target is the act of making it untrue.
+    # A latch naming an object the scene no longer has is dropped rather than trusted.
+    roles = carry.get("roles")
     if not (roles and all(roles.get(k) in privileged for k in ("target", "destination"))):
         roles = resolve_roles(privileged, instruction, eef)
     target = _pos(privileged, roles["target"])
     destination = _pos(privileged, roles["destination"])
 
     # --- the context: every number one decision reads, computed once and handed to the stages.
-    ctx, alternatives, latched = _context(proprio, roles, target, destination, tune, phase,
+    ctx, alternatives, latched = _context(proprio, roles, target, destination, tune, carry,
                                           privileged, qids)
 
-    # --- the decision. One call, no branch on the stage's name: `skill.step` applies the progress
+    # --- one executor step, no branch on the stage's name: `executor.step` applies the progress
     # rule, the candidate list, the outcome check and the dwell, in that order, to whichever stage
-    # the carry names. The plan is the module's own, with the number of alternatives **this run**
-    # has: a served question set without `yaw` cannot turn the wrist, so it is not offered the
-    # candidates that need it (`candidates`).
-    plan = (PICK_AND_PLACE if len(alternatives) == PICK_AND_PLACE.candidates
-            else dataclasses.replace(PICK_AND_PLACE, candidates=len(alternatives)))
+    # the carry names. A question set without `yaw` cannot turn the wrist, so it is not offered
+    # the candidates that need it (`candidates`).
+    stages = (PICK_AND_PLACE if len(alternatives) == PICK_AND_PLACE.candidates
+              else dataclasses.replace(PICK_AND_PLACE, candidates=len(alternatives)))
     # The deferred first selection (`_context`) is applied to the carry the executor is handed,
     # not to the one it returns: what it returns may be a *later* selection -- a stage that just
     # blocked has already taken the next candidate -- and that one must stand.
-    phase = dict(phase, candidate=int(latched.pop("candidate")))
-    out = skill.step(plan, phase, ctx)
+    carry = dict(carry, candidate=int(latched.pop("candidate")))
+    out = executor.step(stages, carry, ctx)
     nxt = dict(out.carry)
     nxt["roles"] = dict(roles)
     nxt.update(latched)
 
     error = out.goal - eef
-    choices = axiswise_answers(error, yaw=_yaw_answer(ctx.yaw_err), grip=out.grip,
-                               delta_t=delta_t)
-    choices["rim"] = rim_gold(ctx.rim_view)
     meta = {
         **roles,
         "phase": out.stage.name,
         "next_phase": nxt["name"],
-        "ticks": int(phase["ticks"]),
-        "attempts": int(phase["attempts"]),
-        "candidate": int(phase["candidate"]),
-        "decisions": int(phase.get("decisions", 0)),
+        "ticks": int(carry["ticks"]),
+        "attempts": int(carry["attempts"]),
+        "candidate": int(carry["candidate"]),
+        "decisions": int(carry.get("decisions", 0)),
         "goal": [round(float(v), 4) for v in out.goal],
         "error": [round(float(v), 4) for v in error],
         "grasp_point": [round(float(ctx.grasp_xy[0]), 4), round(float(ctx.grasp_xy[1]), 4),
@@ -1049,7 +915,6 @@ def decide(
         "grasp_turn": float(ctx.grasp.turn),
         "candidates": len(alternatives),
         "rim": [dict(row) for row in ctx.rim_view],
-        "rim_gold": rim_gold(ctx.rim_view),
         # Whether the plan took the letter it was handed, or fell back to its own order because
         # the answer named a candidate this run does not have or has already spent.
         "rim_followed": bool(ctx.choice and any(row["letter"] == ctx.choice
@@ -1060,15 +925,16 @@ def decide(
         "horizontal_to_destination": round(ctx.horizontal_to_destination, 4),
         "place_point": [round(float(ctx.place_xy[0]), 4), round(float(ctx.place_xy[1]), 4)],
         "held": bool(_held(ctx)),
+        "grip": bool(out.grip),
         "blocked": bool(out.blocked),
         "failed": bool(out.failed),
         "distance": round(float(out.distance), 4),
         "finger_width": round(float(proprio[6] - proprio[7]), 4) if proprio.shape[0] >= 8 else None,
-        # Rounded to the tenth of a degree the state prints, so the label the tracker reads off
-        # the text and the answer this module gives are a function of the same number.
+        # Rounded to the tenth of a degree the state prints.
         "yaw_error": round(float(ctx.yaw_err), 1),
     }
-    return choices, nxt, meta
+    return np.asarray(out.goal, dtype=np.float64), nxt, meta
+
 
 
 def _context(proprio, roles: dict, target, destination, tune: dict, phase: dict,
@@ -1247,411 +1113,3 @@ def _context(proprio, roles: dict, target, destination, tune: dict, phase: dict,
         horizontal_to_destination=float(np.hypot(*(target[0:2] - destination[0:2]))),
         drop=float(target[2]) - (float(destination[2]) + tune["release_dz"]),
     ), alternatives, latched
-
-
-# ------------------------------------------------------------------------ the answer's shape
-#
-# Three independent ternary questions (one per world axis), each with its own step size, answered
-# in parallel and composed into **one diagonal move**. It was measured against the alternative --
-# one axis per decision, at one of two sizes -- and won: that shape costs the controller a factor
-# of about sqrt(3) in path length, since a reach a diagonal move covers in 0.25 m of travel takes
-# 0.40 m of axis-wise travel, which at 5 cm a decision is three extra decisions per reach.
-
-#: The candidate sets of the per-axis vocabulary.
-AXISWISE_CANDIDATES: dict[str, tuple[str, ...]] = {
-    "move_x": ("-", "hold", "+"), "move_y": ("-", "hold", "+"), "move_z": ("-", "hold", "+"),
-    "size_x": ("large", "medium", "small"), "size_y": ("large", "medium", "small"),
-    "size_z": ("large", "medium", "small"),
-    "yaw": ("-", "hold", "+"),
-    "rim": RIM_LETTERS,
-    "grip": ("false", "true"),
-}
-
-#: What each size executes, as a fraction of a full-scale component. Measured, not proposed: a
-#: full-scale component is the most the OSC controller will take (δ_t = 1.0 is its range limit) and
-#: it executes ~5 cm per decision per axis, so a diagonal `large` move covers up to 8.7 cm. The
-#: three sizes are then 5.0 / 1.7 / 0.5 cm per axis, which is the coordinator's proposed ~8 / 2.5 /
-#: 0.7 cm read as diagonals. `small` exists because `medium` (1.7 cm) is larger than the grasp's
-#: own positioning tolerance and a two-size vocabulary therefore cannot place the hand on the rim.
-AXISWISE_SCALE: dict[str, float] = {"large": 1.0, "medium": 1.0 / 3.0, "small": 0.1}
-
-
-def axiswise_answers(error, yaw: str = "hold", grip: bool = False,
-                     delta_t: float = EXPERT_DELTA_T) -> dict[str, str]:
-    """The per-axis vocabulary's answers for one 3-d position error.
-
-    Each axis is answered on its own -- direction and size -- against the same thresholds
-    `axis_answer` uses for the single chosen axis, one band lower because there are three sizes:
-
-        |e| < half a small step  -> `hold`
-        |e| < half a medium step -> `small`
-        |e| < half a large step  -> `medium`
-        otherwise                -> `large`
-    """
-    error = np.asarray(error, dtype=np.float64).reshape(3)
-    large = delta_t * EXECUTED_COARSE_PER_DELTA_T
-    steps = {name: AXISWISE_SCALE[name] * large for name in ("small", "medium", "large")}
-    # A size is chosen by the step **above** it, exactly as the two-size rule is: take the largest
-    # step whose own overshoot the error can afford. Reading each band against its own step instead
-    # is an off-by-one that answers `large` for a 1.2 cm error -- measured, on task 0: a 5 cm step
-    # for a 1.2 cm error, the hand 4.6 cm above the rim when the fingers shut, 2/10.
-    out: dict[str, str] = {"yaw": yaw, "grip": "true" if grip else "false"}
-    for index, name in enumerate("xyz"):
-        e = float(error[index])
-        if abs(e) < HOLD_BAND * steps["small"]:
-            out[f"move_{name}"], out[f"size_{name}"] = "hold", "small"
-            continue
-        if abs(e) < FINE_BAND * steps["medium"]:
-            size = "small"
-        elif abs(e) < FINE_BAND * steps["large"]:
-            size = "medium"
-        else:
-            size = "large"
-        out[f"move_{name}"] = "+" if e > 0 else "-"
-        out[f"size_{name}"] = size
-    return out
-
-
-def compose_axiswise(choices: dict, delta_t: float = EXPERT_DELTA_T,
-                     delta_r: float = EXPERT_DELTA_R) -> np.ndarray:
-    """The per-axis answers as one `(7,)` LIBERO action: a diagonal move, not an axis-aligned one.
-
-    The counterpart of `robojev.compose.compose` for `AXISWISE_CANDIDATES`, and
-    **the same action for the same answers** -- the two are pinned against each other in
-    `test_expert.py`, because this one is what the 100-episode table is measured with and that
-    one is what the served policy executes.
-
-    `delta_r` is not what the wrist is scaled by and is kept only for the signature's sake: a
-    rotation is scaled by `YAW_SCALE["large"]` over the **measured**
-    `EXECUTED_DEG_PER_UNIT`, exactly as a translation is scaled by what it executes rather than
-    by what it commands. The wrist has **one** speed and it is not the hand's -- see
-    `v2.compose.compose`, which this is pinned against.
-    """
-    action = np.zeros(7, dtype=np.float32)
-    for index, name in enumerate("xyz"):
-        move = choices[f"move_{name}"]
-        if move != "hold":
-            sign = 1.0 if move == "+" else -1.0
-            action[index] = sign * delta_t * AXISWISE_SCALE[choices[f"size_{name}"]]
-    if choices.get("yaw", "hold") != "hold":
-        sign = 1.0 if choices["yaw"] in ("+", "+yaw") else -1.0
-        action[5] = sign * min(YAW_SCALE["large"] / EXECUTED_DEG_PER_UNIT, 1.0)
-    action[6] = 1.0 if choices["grip"] in (True, "true") else -1.0
-    return action
-
-
-# ------------------------------------------------------------------------- the v2 vocabulary
-#
-# RoboJEV v2 (`docs/DESIGN.md` §7, a design ruling) adopts
-# the `axiswise` set above **as it is measured** -- per-axis direction *and* per-axis size, the
-# shape that scored 85/100 at a median of 27 decisions against the shared-step vocabulary's
-# 83/100 at 33. So `answers_v2` is not a new controller and not even a new answer: it is
-# `decide`'s own answers, whose question ids are already v2's, plus
-# the one question v2 adds (`subgoal`) and `grip` normalised to the bool a `boolean` question
-# takes. Anything else would be a second controller to measure.
-
-#: `PHASES` -> `robojev.questions.SUBGOAL_CANDIDATES`, and **total** over `PHASES`
-#: (`test_the_subgoal_map_is_total_over_the_phase_machine`).
-#:
-#: `descend` is `reach` and not `grasp`, which is the one line worth reading twice: the expert's
-#: `close` is the decision that shuts the fingers, and `grasp` is the candidate whose text says
-#: "this is where they close". A `descend` labelled `grasp` would teach the model to close a
-#: decision early, on the way down, which is the 4.5 cm miss of `GRASP_DZ`'s own measurement.
-#: `done` is `retreat` because v2 has no candidate for "the episode is over" -- LIBERO ends the
-#: episode on its own predicate and nothing is asked after it.
-#:
-#: **Read off the stage table** rather than written out again: each `Stage` carries the subgoal
-#: it belongs to, so a sub-stage cannot exist without one or be mapped to a second one somewhere
-#: else. `v2.compose.PHASE_FROM_EXPERT` aliases this dict (it imports *this* module, so importing
-#: it back would be a cycle) and `test_the_subgoal_map_is_the_composer_s` pins the two together.
-V2_PHASE_SUBGOAL: dict[str, str] = PICK_AND_PLACE.subgoals
-
-#: The v2 motor vocabulary's question ids, in the order §3 declares them. `yaw` is answered here
-#: like any other: it is `hold` while the candidate in force stands on the wrist's own axis
-#: (which is every candidate the eight non-drawer tasks reach) and a sign while the plan is
-#: turning the wrist onto a rim point off it.
-V2_QIDS: tuple[str, ...] = (
-    "move_x", "move_y", "move_z", "size_x", "size_y", "size_z", "yaw", "rim", "grip", "subgoal",
-)
-
-#: The three per-axis size questions, keyed by axis, and the three direction ones.
-V2_SIZE_QIDS: tuple[str, ...] = ("size_x", "size_y", "size_z")
-V2_MOVE_QIDS: tuple[str, ...] = ("move_x", "move_y", "move_z")
-
-#: How far the tracker's waypoint may sit from the expert's own before `gold_for_state` calls
-#: them two different plans, in metres. `XY_TOL` is the expert's own arrival tolerance: two
-#: waypoints that agree to inside it produce the same answer to every question, so a drift
-#: smaller than this cannot change a label, and a drift larger than it can.
-GOLD_WAYPOINT_TOL: float = XY_TOL
-
-
-def answers_v2(
-    state8,
-    privileged: dict,
-    instruction: str,
-    phase: dict | None = None,
-    *,
-    delta_t: float = EXPERT_DELTA_T,
-    roles: dict | None = None,
-    qids=None,
-) -> tuple[dict[str, Any], dict, dict]:
-    """One decision point in the **v2 vocabulary**: `(answers, next_phase, meta)`.
-
-    `answers` has one entry per `V2_QIDS`: the three signs, the three per-axis sizes, `yaw`,
-    `grip` (a bool, which is what a `boolean` question's `value` takes) and `subgoal`.
-
-    The same phase machine, the same waypoints and the same thresholds as `decide` -- only the
-    answer's *shape* changes, and it changes to the shape `decide` already produces. Serve it at `delta_t = 1.0` (§7 a design ruling): these are answers about a 5 cm
-    step, and a server composing them with the demonstrations' 0.3536 would execute a fifth of
-    every move the expert meant.
-
-    Pure and total, exactly as `decide` is: `test_answers_v2_is_total_over_random_states` draws
-    200 privileged states and asserts every qid is present and every value is a declared
-    candidate, because a label source that omits a question is a training row that cannot be
-    built.
-
-    **The motion answers are the same function of the same numbers as the parser's.** At
-    `delta_t = EXPERT_DELTA_T` every `move_*`/`size_*` here equals
-    `robojev.compose.labels_from_waypoint`'s for the same waypoint offset -- the two
-    read the same bands against the same steps (`AXISWISE_SCALE`, `HOLD_BAND`, `FINE_BAND`) --
-    and `test_the_v2_answers_are_the_v2_label_function` pins it over a thousand offsets. It is
-    pinned rather than delegated because `v2.compose` imports this module: calling it from here
-    would be a cycle, and a label source that cannot be imported is worse than one that is
-    checked.
-
-    The one seam that pinning leaves open, stated rather than hidden: this compares metres
-    against a band computed in metres and the label function compares centimetres against the
-    same band computed in centimetres, so an offset that lands *exactly* on a band edge (0.30,
-    1.17 or 3.50 cm to the last bit) can fall either side of it in the two. It moves one axis by
-    one size for one decision and the next decision re-reads the waypoint, which is why the
-    labels of record come from `gold_for_state` -- the label function applied to the rounded
-    numbers the state prints -- and not from here.
-    """
-    if phase is None:
-        phase = new_phase(roles)
-    choices, nxt, meta = decide(state8, privileged, instruction, phase,
-                                delta_t=delta_t, qids=qids)
-    answers: dict[str, Any] = {qid: choices[qid] for qid in V2_QIDS[:8]}
-    # A `boolean` question's value is a bool on the wire and in `compose`; `axiswise_answers`
-    # spells it as a candidate id because its own candidate set is strings. Normalised here, once,
-    # so a caller never has to know which of the two it is holding.
-    answers["grip"] = choices["grip"] in (True, "true")
-    answers["subgoal"] = V2_PHASE_SUBGOAL[meta["phase"]]
-
-    offset_cm = [round(float(v) * 100.0, 1) for v in meta["error"]]
-    meta = {
-        **meta,
-        "questions_version": "v2",
-        "subgoal": answers["subgoal"],
-        # The waypoint, in the unit v2's state prints it in: signed gripper-relative centimetres.
-        # A console showing a decision beside the state it was made from should not have to
-        # convert metres.
-        "waypoint_cm": offset_cm,
-        "offset_cm": offset_cm,
-        "sizes": {axis: answers[f"size_{axis}"] for axis in "xyz"},
-        "delta_t": float(delta_t),
-        "cm_per_unit": EXECUTED_COARSE_PER_DELTA_T * 100.0,
-    }
-    return answers, nxt, meta
-
-
-def _tracker_waypoint(tracker) -> np.ndarray | None:
-    """The point `tracker` is steering to, in world metres, or `None` if it has none."""
-    waypoint = getattr(tracker, "waypoint", None)
-    if waypoint is None:
-        return None
-    return np.asarray(waypoint.point, dtype=np.float64).reshape(3)
-
-
-def gold_for_state(tracker, state8, privileged: dict, instruction: str,
-                   phase: dict | None = None, *, delta_t: float = EXPERT_DELTA_T,
-                   roles: dict | None = None, qids=None) -> tuple[dict[str, Any], dict, dict]:
-    """The label of record for one state: `(answers, next_phase, meta)`.
-
-    The difference from `answers_v2` is the whole point of the function. `answers_v2` computes
-    its own waypoint and answers about it; this reads the waypoint **off the tracker** -- the
-    same object that rendered the state string -- and returns
-    `robojev.state.TrackerV2.gold_answers()`, which is `labels_from_waypoint` applied
-    to the offsets *as the state prints them* (rounded, through `rounded_cm`). So the gold is by
-    construction a function of the numbers in the text, which is the design notes's principle 1 and gate
-    G3's contract: `robojev.parse.parse(state_text)` has to reproduce it from the
-    string alone, and it can only fail to if the two read the same numbers differently.
-
-    The expert is still run, as the **check**. Where the tracker's plan and the expert's own
-    differ by more than `GOLD_WAYPOINT_TOL` this raises `ExpertError` rather than returning a
-    label: a disagreement between the waypoint the state names and the waypoint the controller
-    is steering to is a bug that G3 would otherwise surface as a 97 % parser, weeks later and
-    attributed to the parser. It should fail loudly during a harvest instead.
-
-    What is compared is what the two claim to compute the same way:
-
-    * **the roles** -- naming a different bowl is the sharpest possible disagreement, and the
-      cheapest to detect;
-    * **the rim geometry** while reaching, grasping or lifting -- the horizontal radius from the
-      target's own pose and the height above it, i.e. `rim_radius`, `grasp_dz` and which retry
-      offset is in force. Not the rim *direction*: the expert latches the rim axis at the first
-      decision and signs it with the candidate in force, while a stage-geometry tracker re-reads
-      it from the wrist every decision, so the two legitimately stand on opposite ends of the
-      same axis, and a check that fired on that would fire on every retry;
-    * **the place point** while carrying or placing -- `destination_xy - (target_xy - eef_xy)`,
-      the offset that aims the bowl rather than the hand.
-
-    `retreat` is not compared: "up and away" is a point the two define from different origins
-    (the expert from the hand, the tracker from the destination) and nothing is labelled from it
-    that a centimetre of height changes.
-    """
-    answers, nxt, meta = answers_v2(state8, privileged, instruction, phase,
-                                    delta_t=delta_t, roles=roles,
-                                    qids=getattr(tracker, "qids", None) if qids is None else qids)
-    point = _tracker_waypoint(tracker)
-    if point is None:
-        raise ExpertError(
-            "the tracker has no waypoint for this state: it has observed nothing, or its target "
-            "is not in the scene. A gold label read off a waypoint that does not exist would be "
-            "a label the state string cannot carry."
-        )
-
-    for role in ("target", "destination"):
-        theirs = getattr(tracker, role, None)
-        if theirs is not None and theirs != meta[role]:
-            raise ExpertError(
-                f"the tracker's {role} is {theirs!r} and the expert's is {meta[role]!r}: the "
-                f"state names one object and the label was decided about another"
-            )
-
-    # **The tracker's own stage**, not the expert's. The tracker chose its waypoint for the stage
-    # its facts imply, and the expert's phase machine is finer than v2's six subgoals (it has a
-    # hover, a settle and a retry that `reach` and `grasp` cover between them), so the two
-    # legitimately name different stages for the same state. What is *not* legitimate is the two
-    # steering to different points within one stage, and that is what is compared.
-    subgoal = getattr(tracker, "subgoal", None) or answers["subgoal"]
-    eef = np.asarray(state8, dtype=np.float64).reshape(-1)[0:3]
-    target = _pos(privileged, meta["target"])
-    goal = np.asarray(meta["goal"], dtype=np.float64).reshape(3)
-    # **The cheapest agreement first: the two steer to the same point.** A tracker that runs this
-    # module's own plan (`v2.state.plan`, which is `decide` called from the other side) produces
-    # the expert's waypoint exactly, and no geometric reconstruction of it can be more accurate
-    # than the number itself. The looser comparisons below exist for a tracker that reconstructs
-    # the plan from the *stage* rather than running it, and are taken only when this one fails.
-    exact = float(np.linalg.norm(point - goal))
-    if subgoal in ("reach", "grasp", "lift"):
-        # The rim *direction* is not compared: the expert latches the axis once and the
-        # candidate in force says which end of it to stand on, while a stage-geometry tracker
-        # re-reads it from the wrist every decision. The radius from
-        # the target is what both agree on -- except during `lift`, whose goal is measured from
-        # where the hand *was* when it closed and has no rim radius at all, which is why the
-        # exact comparison above is the one that passes there.
-        radius = float(np.hypot(*(point[0:2] - target[0:2])))
-        drift_xy = abs(radius - float(np.hypot(*(np.asarray(meta["grasp_point"][0:2]) - target[0:2]))))
-        # **Two reconstructed heights are legitimate, and the check accepts either.** With an
-        # instruction the tracker flies to `HOVER` above the rim and only descends once x and y
-        # are aligned; without one it falls back to `waypoint_for`'s plainer stage geometry,
-        # whose `reach` waypoint is the rim point itself. Both are the same plan at different
-        # resolutions. A third height is not, and that is what this still fires on.
-        stage_z = float(meta["grasp_point"][2]) + (LIFT if subgoal == "lift" else 0.0)
-        drift_z = min(abs(float(point[2]) - float(goal[2])), abs(float(point[2]) - stage_z))
-        _raise_on_drift(min(exact, max(drift_xy, drift_z)), subgoal, point, meta)
-    elif subgoal in ("carry", "place"):
-        place = np.asarray(meta["place_point"], dtype=np.float64).reshape(2)
-        _raise_on_drift(min(exact, float(np.hypot(*(point[0:2] - place)))), subgoal, point, meta)
-
-    gold = tracker.gold_answers()
-    meta = {
-        **meta,
-        "gold_source": "tracker",
-        "tracker_subgoal": getattr(tracker, "subgoal", None),
-        "tracker_waypoint": [round(float(v), 4) for v in point],
-        "tracker_offset_cm": [round(float(v - e) * 100.0, 1) for v, e in zip(point, eef)],
-    }
-    return gold, nxt, meta
-
-
-def _raise_on_drift(drift: float, subgoal: str, point, meta: dict) -> None:
-    if drift <= GOLD_WAYPOINT_TOL:
-        return
-    raise ExpertError(
-        f"in subgoal {subgoal!r} the tracker steers to {[round(float(v), 4) for v in point]} and "
-        f"the expert to {meta['goal']} (grasp point {meta['grasp_point']}, place point "
-        f"{meta['place_point']}): they differ by {drift:.4f} m, more than the {GOLD_WAYPOINT_TOL} "
-        f"m that cannot change an answer. The state names one waypoint and the label was decided "
-        f"about another."
-    )
-
-
-def corrupt(choices: dict, p: float, rng, *, exempt: tuple[str, ...] = ()) -> dict:
-    """Each answer independently replaced, with probability `p`, by a uniformly chosen *other*
-    candidate of its own question.
-
-    The model's error model, as an experiment: a learned policy is not a controller that fails
-    gracefully, it is one whose per-question accuracy is 1 - p. Running the expert through this
-    says what accuracy the closed loop actually needs, and `exempt` says whether the irreversible
-    answer (`grip`) needs protecting more than the rest.
-    """
-    sets = dict(AXISWISE_CANDIDATES)
-    out = dict(choices)
-    for qid, value in choices.items():
-        if qid in exempt or qid not in sets or rng.random() >= p:
-            continue
-        as_text = ("true" if value else "false") if isinstance(value, bool) else value
-        others = [c for c in sets[qid] if c != as_text]
-        picked = others[int(rng.integers(len(others)))]
-        out[qid] = (picked == "true") if isinstance(value, bool) else picked
-    return out
-
-
-def run_episode(env, init_state_index: int, *, max_steps: int = 220,
-                delta_t: float = EXPERT_DELTA_T, delta_r: float = EXPERT_DELTA_R,
-                roles: dict | None = None,
-                corruption: float = 0.0, corruption_exempt: tuple[str, ...] = (),
-                seed: int = 0, on_decision=None, qids=None) -> dict:
-    """Drive `env` (a `robojev.envs.DecisionEnv`) with this expert for one episode.
-
-    The closed loop the whole module is measured by, and the one an expert relabelling would run:
-    read the privileged state, `decide`, `compose` the answer, step it `CHUNK_STEPS` times, repeat
-    until LIBERO's own success predicate ends the episode or the horizon does. `on_decision(i,
-    choices, meta, state8, privileged)` is called before each chunk, which is where a harvester
-    would write its row.
-
-    It lives in the module rather than in the measurement script because it *is* the contract:
-    the expert's answers are only labels if something composes and executes them exactly this way.
-    """
-    rng = np.random.default_rng(seed)
-    obs = env.reset(init_state_index)
-    phase = new_phase(roles)
-    steps = 0
-    success = False
-    decisions = 0
-    trace: list[dict] = []
-    while steps < max_steps and not success:
-        state8 = env.state_vector(obs)
-        privileged = env.privileged(obs)
-        choices, phase, meta = decide(state8, privileged, env.instruction, phase,
-                                      delta_t=delta_t, qids=qids)
-        if corruption > 0:
-            choices = corrupt(choices, corruption, rng, exempt=corruption_exempt)
-        if on_decision is not None:
-            on_decision(decisions, choices, meta, state8, privileged)
-        trace.append({"decision": decisions, "step": steps, **{k: v for k, v in choices.items()},
-                      "phase": meta["phase"], "held": meta["held"],
-                      "attempts": meta["attempts"], "candidate": meta["candidate"],
-                      "grasp_turn": meta["grasp_turn"], "yaw_error": meta["yaw_error"]})
-        # **The plan obeys the answer that was executed, including its own corrupted one.** `rim`
-        # is the only answer that is not a move: it names which way round the rim to stand, and
-        # the plan reads it out of the carry at the moments it selects a candidate (`ctx.choice`).
-        # A loop that reported one letter and planned against another would be a harvest whose
-        # rows describe an episode nobody ran -- and `gold_for_state`'s waypoint check says so,
-        # because `TrackerV2.answer` puts the executed letter into *its* carry either way.
-        phase = with_executed(phase, choices)
-        action = compose_axiswise(choices, delta_t, delta_r)
-        for _ in range(CHUNK_STEPS):
-            if steps >= max_steps:
-                break
-            result = env.step(action)
-            obs, steps = result.obs, steps + 1
-            if result.done:
-                success = True
-                break
-        decisions += 1
-    return {"success": bool(success), "steps": steps, "decisions": decisions,
-            "phase": phase["name"], "attempts": int(phase["attempts"]),
-            "out_of_horizon": bool(not success and steps >= max_steps), "trace": trace}

@@ -45,10 +45,31 @@ def src_dir() -> pathlib.Path:
     return home() / "src"
 
 
+#: The runtime root this code used while it lived inside an evaluation platform, looked in for
+#: pinned upstream checkouts when no root has been named at all.
+LEGACY_DEFAULT_HOME = "~/.robopp"
+
+
+def src_dirs() -> list[pathlib.Path]:
+    """Every directory a pinned upstream checkout may be found in, in the order to look.
+
+    `src_dir()` first. When **neither** root variable is set, the legacy default root's `src/` is
+    looked in too: a checkout cloned there before the rename is the same pinned commit, and
+    cloning 2 GB of history again to find it is not worth anything. A root that *was* named is
+    the whole truth, which is also what keeps a test's `$ROBOJEV_HOME` from finding a real clone.
+    """
+    found = [src_dir()]
+    if not (os.environ.get(HOME_ENV) or os.environ.get(LEGACY_HOME_ENV)):
+        legacy = pathlib.Path(LEGACY_DEFAULT_HOME).expanduser() / "src"
+        if legacy not in found:
+            found.append(legacy)
+    return found
+
+
 def env_dir(name: str) -> pathlib.Path:
     """`$ROBOJEV_HOME/envs/<name>` -- a built Python environment for an upstream that needs one."""
     return home() / "envs" / name
 
 
-__all__ = ["DEFAULT_HOME", "HOME_ENV", "LEGACY_HOME_ENV", "checkpoints_dir", "data_dir",
-           "env_dir", "home", "src_dir"]
+__all__ = ["DEFAULT_HOME", "HOME_ENV", "LEGACY_DEFAULT_HOME", "LEGACY_HOME_ENV",
+           "checkpoints_dir", "data_dir", "env_dir", "home", "src_dir", "src_dirs"]

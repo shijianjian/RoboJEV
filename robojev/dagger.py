@@ -1,7 +1,7 @@
-"""One DAgger round: the states the trained policy actually visits, labelled by the expert.
+"""One DAgger round: the states the trained policy actually visits, labelled by the label function.
 
-Note §5.3. The policy is trained on states whose tracker blocks were filled from the *expert's*
-own rollouts -- a controller that is right by construction and therefore never wanders. At test
+Note §5.3. The policy is trained on states whose tracker blocks were filled by the harvest's own
+label rollouts -- a loop that follows its labels and therefore rarely wanders. At test
 time the same blocks are filled from the model's own answers, and a successful rollout never
 contains a failed attempt, so the history a rollout writes for itself is drawn from a distribution
 no training row was ever sampled from. That is the classic covariate shift behind imitation
@@ -10,8 +10,8 @@ learning, and one round of DAgger (Ross et al.) is the cheapest honest fix:
 1. roll the trained policy out on the training tasks;
 2. record the state it was actually given at every decision point -- **its own prompt, verbatim**,
    out of `decisions.meta.state`, never a reconstruction;
-3. relabel each visited state with `robojev.expert.gold_for_state` against a `TrackerV2`
-   replayed over the episode -- the **same** label source the harvest's own rows come from;
+3. relabel each visited state with `TrackerV2.gold_answers` on a tracker replayed over the
+   episode -- the **same** label function the harvest's own rows come from;
 4. add the rows to the training set and train again.
 
 **What is not relabelled.** The `state` text. It is the policy's own prompt, byte for byte,
@@ -24,9 +24,8 @@ the serving latch's refusals. If the model named the wrong bowl, the correction 
 corrected `target` answer; a motor label quietly computed about a different bowl would be a label
 of a state nobody read.
 
-The round is **pure on-policy**: every executed chunk is the policy's, with no expert mixing. A
-label source that also drove the arm would be measuring a different policy than the one being
-corrected.
+The round is **pure on-policy**: every executed chunk is the policy's own. A label source that
+also drove the arm would be measuring a different policy than the one being corrected.
 
 Nothing here writes into a harvest directory. `collect` writes its own, in the harvest's layout
 (`task_<i>.jsonl` plus a manifest), and `merge` builds a third directory holding both -- the
@@ -75,12 +74,12 @@ PROVENANCE = dataset_mod.PROVENANCE
 #: directory as their own file (see `merge`).
 GROUNDING_SOURCE = "grounding"
 
-#: Who says what should have been answered at a state the model visited:
-#: `robojev.expert.gold_for_state` against a `TrackerV2` rebuilt from the recorded
-#: observations, which is the **same** label source the rows were harvested with. A DAgger round
-#: labelled by a different rule than the rows it will be trained beside is a second dataset, not
-#: a correction of the first, which is why there is one name here and not a choice.
-LABELLER = "expert"
+#: Who says what should have been answered at a state the model visited: `TrackerV2.gold_answers`
+#: on a tracker rebuilt from the recorded observations, which is the **same** label function the
+#: rows were harvested with. A DAgger round labelled by a different rule than the rows it will be
+#: trained beside is a second dataset, not a correction of the first, which is why there is one
+#: name here and not a choice.
+LABELLER = "tracker"
 
 
 # --------------------------------------------------------------------------------------------
@@ -133,8 +132,8 @@ class DaggerConfig:
         A DAgger directory has no grip rollout and no demonstration, so the keys that describe
         those are absent rather than guessed at; `merge` compares only the keys both manifests
         carry. The round's states are `v2.state.TrackerV2`'s and its labels are
-        `expert.gold_for_state`'s, which is exactly what the harvest manifest calls
-        `memory_rule: "v2-tracker-1"` and `label_source: "expert_tracker"` -- so those are the two
+        `TrackerV2.gold_answers`', which is exactly what the harvest manifest calls
+        `memory_rule: "v2-tracker-1"` and `label_source: "tracker"` -- so those are the two
         strings reported here, and `merge` accepts the round against the harvest it was collected
         from.
         """
@@ -146,7 +145,7 @@ class DaggerConfig:
             "fine_label_threshold": self.fine_label_threshold,
             "move_floor": self.move_floor, "yaw_floor": self.yaw_floor,
             "seed": self.seed,
-            "label_source": "expert_tracker",
+            "label_source": v2rollout.LABEL_SOURCE,
             "labeller": LABELLER,
             "questions_version": "v2",
             "memory_rule": MEMORY_RULE_V2,
@@ -222,7 +221,7 @@ def episode_rng(seed: int, task_index: int, init_state: int) -> np.random.Genera
     """A generator that depends on the episode, not on the run.
 
     `harvest._row_rng`'s rule one level up: a blake2b digest of the three numbers, so collecting
-    task 3 alone draws the same β coin flips it would have drawn beside tasks 0-7. `hash()` is
+    task 3 alone draws the same coin flips it would have drawn beside tasks 0-7. `hash()` is
     salted per process for strings and cannot be used.
     """
     key = f"{seed}:{task_index}:{init_state}".encode()
@@ -295,8 +294,7 @@ class _Recorder:
 
     * read the state text the policy was actually given, out of `decisions.meta.state`;
     * hand the policy's own answers to a memory of our own, so `Subgoal` (and therefore the
-      waypoint and the latch) follows the rollout rather than a demonstration;
-    * with probability β, return the expert's chunk instead of the policy's.
+      waypoint and the latch) follows the rollout rather than a demonstration.
 
     `wants_privileged` is True unconditionally: the labels need object poses, and a DAgger round
     of a policy that did not want them would otherwise have nothing to label against.
@@ -369,8 +367,8 @@ class _Recorder:
         proprio = np.asarray(self.env.state_vector(obs), dtype=np.float32)
         names = target_for(self.env, privileged, proprio, self.instruction, self.cfg)
         # The whole decision point, kept as observed and **as served**. Nothing is labelled yet:
-        # the expert's answer at a state is a function of the tracker's plan at that state, and
-        # the tracker is replayed once, over the episode, in `relabel_with_expert`. What is kept
+        # the label at a state is a function of the tracker's plan at that state, and the
+        # tracker is replayed once, over the episode, in `relabel_states`. What is kept
         # here is everything that replay needs.
         #
         # The clock is the harvest's, not the simulator's: decision index times the harvest's own
@@ -466,7 +464,7 @@ def run_one(policy, env, protocol, cfg: DaggerConfig, task_index: int, init_stat
     outcome = {"success": bool(result.success), "steps": int(result.steps),
                "terminated_by": result.terminated_by, "error": result.error,
                "first_success_step": result.first_success_step}
-    recorder.rows = relabel_with_expert(
+    recorder.rows = relabel_states(
         recorder.trace, recorder.instruction, recorder.privileged, cfg=cfg,
         task_index=task_index, init_state=init_state, split=split, roles=recorder.roles)
     for row in recorder.rows:
@@ -475,10 +473,10 @@ def run_one(policy, env, protocol, cfg: DaggerConfig, task_index: int, init_stat
                        skipped=recorder.skipped, **outcome)
 
 
-def relabel_with_expert(trace, instruction: str, privileged_seq, *, cfg: DaggerConfig,
-                        task_index: int, init_state: int, split: str,
-                        roles: dict | None = None) -> list[dict]:
-    """The DAgger labeller: `expert.gold_for_state` on the model's **own** visited states.
+def relabel_states(trace, instruction: str, privileged_seq, *, cfg: DaggerConfig,
+                   task_index: int, init_state: int, split: str,
+                   roles: dict | None = None) -> list[dict]:
+    """The DAgger labeller: `TrackerV2.gold_answers` on the model's **own** visited states.
 
     `robojev.rollout.relabel` does the work, and that is the point rather than an
     implementation detail: the rows this returns come out of exactly the function the harvest's
@@ -488,8 +486,7 @@ def relabel_with_expert(trace, instruction: str, privileged_seq, *, cfg: DaggerC
     the only source under which the block is the distribution that actually shifted).
 
     The round is **pure on-policy** (DAgger's β = 0, the measurements): every executed chunk is the
-    policy's own. There is no mixing parameter, because forcing the expert's chunk instead would
-    mean composing it here, which is `v2.compose.compose`'s job and not this module's.
+    policy's own. There is no mixing parameter.
     """
     from robojev import rollout                                 # noqa: PLC0415
 
@@ -573,10 +570,10 @@ def collect(policy, suite: str, tasks, init_states, out_dir, *,
         split = cfg.splits.get(task_index, "train")
         record = {"rows": 0, "split": split, "episodes": 0, "successes": 0, "skipped": 0,
                   "translate": {}, "rotate": {}, "magnitude": {}, "grip": {},
-                  "subgoal": {}, "waypoint": {}, "state_source": {}, "expert_forced": 0,
+                  "subgoal": {}, "waypoint": {}, "state_source": {},
                   "terminated_by": {},
                   # How often each question was asked, and how often the model's **executed**
-                  # answer differed from the label the expert gives that same state. Their ratio
+                  # answer differed from the label of that same state. Their ratio
                   # is the round's own yield: the per-question error rate of the policy being
                   # corrected, on the states it actually visits.
                   "asked": {}, "disagrees": {},
@@ -636,7 +633,7 @@ def collect(policy, suite: str, tasks, init_states, out_dir, *,
                         for t, r in sorted(per_task.items(), key=lambda kv: int(kv[0]))},
         },
         # Per question: how often it was asked and how often the policy's executed answer was not
-        # the expert's. This is what the round measured.
+        # the label. This is what the round measured.
         "disagreement": _disagreement(per_task),
         "translate": _totals(per_task, lambda r: r["translate"]),
         "rotate": _totals(per_task, lambda r: r["rotate"]),
@@ -648,7 +645,6 @@ def collect(policy, suite: str, tasks, init_states, out_dir, *,
         # the model's own memory, which is the one thing this round is for. A nonzero count here
         # means the policy reported no `decisions.meta.state` and the round measured nothing.
         "state_source": _totals(per_task, lambda r: r["state_source"]),
-        "expert_forced": sum(r["expert_forced"] for r in per_task.values()),
         "skipped": sum(r["skipped"] for r in per_task.values()),
         "terminated_by": _totals(per_task, lambda r: r["terminated_by"]),
         "per_task": per_task,
@@ -676,8 +672,6 @@ def _count(record: dict, row: dict) -> None:
     if meta.get("waypoint") is not None:
         _bump(record["waypoint"], meta["waypoint"])
     _bump(record["state_source"], meta.get("state_source", "rebuilt"))
-    if meta.get("expert_forced"):
-        record["expert_forced"] += 1
 
 
 def _disagreement(per_task: dict) -> dict[str, dict]:
@@ -716,11 +710,10 @@ MERGE_SHAPE_KEYS = ("suite", "every", "chunk_steps", "fine_label_threshold", "mo
 def effective_shape(dagger_manifest: dict) -> dict:
     """A round's shape, with the labeller taken as the ground truth about what its rows are.
 
-    Rounds collected before `DaggerConfig.shape` knew about the expert labeller recorded the old
-    question set's `memory_rule` and `label_source` for rows that are this one's -- the states
-    came from `v2.state.TrackerV2` and the labels from `expert.gold_for_state` whatever the
-    manifest says. The manifest's own `labeller: "expert"` is decisive and is what this reads, so
-    a round already on disk does not have to be re-rolled for an hour to be merged.
+    A round whose manifest recorded a stale `memory_rule` or `label_source` for rows that are this
+    labeller's -- the states came from `v2.state.TrackerV2` and the labels from
+    `TrackerV2.gold_answers` whatever the manifest says -- is read by its `labeller`, which is
+    decisive, so a round already on disk does not have to be re-rolled for an hour to be merged.
     """
     from robojev import rollout as v2rollout                   # noqa: PLC0415
     from robojev.state import MEMORY_RULE_V2                   # noqa: PLC0415
@@ -728,7 +721,7 @@ def effective_shape(dagger_manifest: dict) -> dict:
     if dagger_manifest.get("labeller") != LABELLER:
         return dict(dagger_manifest)
     corrected = {k: v for k, v in dagger_manifest.items() if k != "grip_label"}
-    corrected.update(label_source="expert_tracker", memory_rule=MEMORY_RULE_V2,
+    corrected.update(label_source=v2rollout.LABEL_SOURCE, memory_rule=MEMORY_RULE_V2,
                      questions_version="v2", row_source=v2rollout.DAGGER_SOURCE)
     return corrected
 
