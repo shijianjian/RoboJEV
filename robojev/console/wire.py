@@ -161,7 +161,7 @@ def parse_command(raw: str, *, policies: tuple[str, ...] = ("expert",)) -> Comma
 # --------------------------------------------------------------------------- server -> client
 
 def config(*, policies, suites, default: StartSpec, video: dict, state: str,
-           replays: str | None) -> dict:
+           replays: str | None, weights=()) -> dict:
     """Sent once, on connect, before any episode: what this console can be asked for.
 
     It is not in the bundle format and never will be -- a recording has no pickers -- so it is the
@@ -176,13 +176,25 @@ def config(*, policies, suites, default: StartSpec, video: dict, state: str,
         "video": video,
         "state": state,
         "replays": replays,
+        # What the page offers: weights, not engines. Each is `{id, label, revision, policy,
+        # checkpoint}`, and choosing one starts with that `policy` and `checkpoint`.
+        "weights": [dict(w) for w in weights],
     }
 
 
-def hello(episode: dict, video: dict) -> dict:
-    """The episode header: the bundle's top-level fields, minus the ones only an ended episode has."""
+def hello(episode: dict, video: dict, scene: dict | None = None) -> dict:
+    """The episode header: the bundle's top-level fields, minus the ones only an ended episode has.
+
+    `scene` is where the 3D viewer loads this episode's scene from (`{hash, xml, assets, nq}`),
+    or None when the environment has none to export."""
     return {"type": "hello", "schema_version": episode.get("schema_version", 1),
-            "episode": episode, "video": video}
+            "episode": episode, "video": video, "scene": scene}
+
+
+def pose(*, step: int, qpos) -> dict:
+    """The simulator's joint positions at one control step: what the 3D scene is posed with.
+    Five decimals is a hundredth of a millimetre, and keeps a 48-wide row near 400 bytes."""
+    return {"type": "pose", "step": int(step), "qpos": [round(float(v), 5) for v in qpos]}
 
 
 def decision(entry: dict) -> dict:
@@ -235,5 +247,5 @@ def dumps(message: dict) -> str:
 
 
 __all__ = ["OPS", "PROTOCOL_VERSION", "STATES", "Command", "CommandError", "StartSpec", "config",
-           "decision", "done", "dumps", "error", "hello", "parse_command", "parse_start", "pong",
+           "decision", "done", "dumps", "error", "hello", "parse_command", "parse_start", "pong", "pose",
            "saved", "status", "tasks"]

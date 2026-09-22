@@ -5,9 +5,12 @@ A bundle is a directory `<name>/` holding
     episode.json      the schema below (`SCHEMA_VERSION`)
     agentview.mp4     H.264 / yuv420p / +faststart, one frame per control step
     wrist.mp4         the same, from the in-hand camera
-    poster.jpg        one still, for the episode strip
+    poster.jpg        one still
+    qpos.bin          the simulator's joint positions, one float32 row per video frame
 
-and nothing else. The videos are written at the environment's own control rate (20 Hz on LIBERO)
+and the hash of the compiled scene those rows pose (`robojev.scene_bundle`, robopp's export): the
+repository's `data/scenes/<hash>/` for a task it ships, `$ROBOJEV_HOME/scenes/<hash>/` otherwise.
+ The videos are written at the environment's own control rate (20 Hz on LIBERO)
 with **every** frame of the episode in them -- the settling steps at the start included -- so
 video time and control step are the same clock:
 
@@ -30,7 +33,12 @@ import time
 
 import numpy as np
 
-SCHEMA_VERSION = 1
+#: 2 added `qpos` and `scene`. A version-1 bundle is still read: it simply has no 3D scene.
+SCHEMA_VERSION = 2
+
+#: The pose file's name and its element type: little-endian float32, frame-major.
+QPOS_NAME = "qpos.bin"
+QPOS_DTYPE = "<f4"
 
 #: The lettered grasp-candidate lines of the state text:
 #: `  C: -y side, turn +90, room 3.1 cm -> fits`.
@@ -262,11 +270,53 @@ def reparse(out: pathlib.Path) -> int:
     return 0
 
 
+def write_qpos(out: pathlib.Path, rows: list[np.ndarray]) -> dict | None:
+    """`qpos.bin` and its description, or None when the frames carry no pose."""
+    if not rows or any(r is None for r in rows):
+        return None
+    table = np.stack([np.asarray(r, dtype=np.float32).reshape(-1) for r in rows])
+    (out / QPOS_NAME).write_bytes(table.astype(QPOS_DTYPE).tobytes())
+    return {"path": QPOS_NAME, "frames": int(table.shape[0]), "nq": int(table.shape[1]),
+            "dtype": QPOS_DTYPE}
+
+
+def read_qpos(out: pathlib.Path, bundle: dict) -> np.ndarray | None:
+    """The pose table a bundle carries, as `[frames, nq]`, or None."""
+    spec = bundle.get("qpos")
+    if not spec:
+        return None
+    raw = np.frombuffer((out / spec["path"]).read_bytes(), dtype=spec.get("dtype", QPOS_DTYPE))
+    return raw.reshape(int(spec["frames"]), int(spec["nq"]))
+
+
+def export_scene(env, scenes_dir: pathlib.Path) -> str | None:
+    """The scene this environment is showing, exported into `scenes_dir`; its hash, or None for
+    an environment with no MJCF to export. A failed export is said, not fatal: the bundle is
+    still a replay without it."""
+    if not hasattr(env, "scene_xml"):
+        return None
+    from robojev import scene_bundle
+
+    try:
+        return scene_bundle.ensure_scene(env.scene_xml()) if scenes_dir is None else \
+            scene_bundle.export_scene_bundle(env.scene_xml(), scenes_dir)
+    except Exception as exc:                                     # noqa: BLE001 - reported
+        print(f"robojev record: scene export failed ({type(exc).__name__}: {exc}); "
+              f"the bundle has no 3D scene", flush=True)
+        return None
+
+
 def record(env, policy, episode, out: pathlib.Path, *, suite: str, task_index: int,
            init_state_index: int, engine: str, protocol, started: float,
            name: str | None = None, note: str = "", title: str | None = None,
-           crf: int = 26) -> dict:
-    """Write `episode` into `out` as a bundle, and return the `episode.json` that was written."""
+           crf: int = 26, scene: str | None = None,
+           scenes_dir: pathlib.Path | None = None) -> dict:
+    """Write `episode` into `out` as a bundle, and return the `episode.json` that was written.
+
+    `scene` is a hash already exported (the console exports once per episode); without one the
+    environment's scene is exported here - into `scenes_dir`, or `$ROBOJEV_HOME/scenes` unless the
+    repository's `data/scenes` already holds it.
+    """
     out.mkdir(parents=True, exist_ok=True)
     info = policy.describe()
     fps = float(getattr(env, "control_freq", 20.0))
@@ -287,6 +337,10 @@ def record(env, policy, episode, out: pathlib.Path, *, suite: str, task_index: i
         h, w = frames[0].shape[:2]
         media[camera] = {"path": filename, "width": int(w), "height": int(h),
                          "fps": fps, "frames": len(frames), "codec": "h264"}
+
+    qpos = write_qpos(out, [f.qpos for f in episode.frames])
+    if qpos is not None and scene is None:
+        scene = export_scene(env, scenes_dir)
 
     checkpoint = info.get("checkpoint") or {}
     bundle = {
@@ -316,6 +370,8 @@ def record(env, policy, episode, out: pathlib.Path, *, suite: str, task_index: i
         "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "wall_seconds": round(time.time() - started, 1),
         "media": media,
+        "qpos": qpos,
+        "scene": None if qpos is None or scene is None else {"hash": scene, "nq": qpos["nq"]},
         "decisions": decisions,
     }
     bundle["poster"] = write_poster(out, poster_time(bundle))
@@ -324,5 +380,95 @@ def record(env, policy, episode, out: pathlib.Path, *, suite: str, task_index: i
     return bundle
 
 
-__all__ = ["POSTER_NAME", "RIM_LINE", "SCHEMA_VERSION", "decision_entry", "ffmpeg", "poster_time",
-           "record", "reparse", "rim_rows", "write_poster", "write_video"]
+# ------------------------------------------------------------------------------- adding a scene
+
+def decode_video(path: pathlib.Path, width: int, height: int) -> np.ndarray:
+    """Every frame of an mp4, as `[n, h, w, 3]` uint8."""
+    cmd = [ffmpeg(), "-hide_banner", "-loglevel", "error", "-i", str(path),
+           "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
+    raw = subprocess.run(cmd, check=True, capture_output=True).stdout
+    return np.frombuffer(raw, dtype=np.uint8).reshape(-1, height, width, 3)
+
+
+def replay_actions(env, bundle: dict, init_state_index: int, seed: int = 7):
+    """Step `env` through a bundle's own executed actions and return what it went through:
+    `(qpos rows, agentview images, success, steps)`, one row and one image per video frame.
+
+    The actions are the recorded ones -- the settling steps' dummy action, then each decision's
+    `action` held for `execute_steps` -- so no policy is involved and the decisions stay exactly
+    as they were recorded. `bundle_with_scene` then checks the pictures against the bundle's own
+    video, which is what says the replay went through the same states.
+    """
+    from robojev.episode import env_qpos
+
+    try:
+        from robojev.envs.libero import set_seed_everywhere
+        set_seed_everywhere(seed)
+    except ImportError:                                          # pragma: no cover
+        pass
+    obs = env.reset(init_state_index)
+    actions = [np.asarray(env.dummy_action(), dtype=np.float32)] * int(bundle["wait_steps"])
+    for d in bundle["decisions"]:
+        actions += [np.asarray(d["action"], dtype=np.float32)] * int(bundle["execute_steps"])
+    rows, images, success, steps = [], [], False, 0
+    for t, action in enumerate(actions):
+        rows.append(env_qpos(env))
+        images.append(env.images(obs).get("agentview"))
+        result = env.step(action.tolist())
+        obs = result.obs
+        if t >= int(bundle["wait_steps"]):
+            steps += 1
+        if result.done:
+            success = True
+            break
+    rows.append(env_qpos(env))
+    images.append(env.images(obs).get("agentview"))
+    return rows, images, success, steps
+
+
+def bundle_with_scene(out: pathlib.Path, env, *, init_state_index: int, seed: int = 7,
+                      scenes_dir: pathlib.Path | None = None, tolerance: float = 6.0) -> dict:
+    """Give an existing bundle its `qpos.bin` and its scene by replaying its recorded actions.
+
+    Refuses -- writes nothing -- unless the replay ends the way the recording did (same success,
+    same number of steps, same number of frames) and every replayed agentview picture matches the
+    bundle's own video frame within `tolerance` (mean absolute difference, 0-255; H.264 at crf 26
+    alone accounts for a couple of units).
+    """
+    out = pathlib.Path(out)
+    path = out / "episode.json"
+    bundle = json.loads(path.read_text(encoding="utf-8"))
+    rows, images, success, steps = replay_actions(env, bundle, init_state_index, seed)
+    problems = []
+    if bool(success) != bool(bundle["success"]):
+        problems.append(f"success {success} != recorded {bundle['success']}")
+    if steps != int(bundle["steps"]):
+        problems.append(f"steps {steps} != recorded {bundle['steps']}")
+    if len(rows) != int(bundle["total_frames"]):
+        problems.append(f"frames {len(rows)} != recorded {bundle['total_frames']}")
+    track = (bundle.get("media") or {}).get("agentview")
+    worst = 0.0
+    if track is not None and not problems:
+        video = decode_video(out / track["path"], int(track["width"]), int(track["height"]))
+        for i, img in enumerate(images[: len(video)]):
+            diff = float(np.abs(video[i].astype(np.int16) - np.asarray(img, np.int16)).mean())
+            worst = max(worst, diff)
+        if worst > tolerance:
+            problems.append(f"replayed pictures differ from the video (worst frame {worst:.2f})")
+    if problems:
+        raise SystemExit(f"robojev scene {out.name}: the replay is not the recording: "
+                         + "; ".join(problems))
+    qpos = write_qpos(out, rows)
+    scene = export_scene(env, scenes_dir)
+    bundle["schema_version"] = SCHEMA_VERSION
+    bundle["qpos"] = qpos
+    bundle["scene"] = None if scene is None else {"hash": scene, "nq": qpos["nq"]}
+    path.write_text(json.dumps(_clean(bundle), indent=1) + "\n", encoding="utf-8")
+    print(f"SCENE {out.name}: {len(rows)} frames, nq {qpos['nq']}, worst frame {worst:.2f}, "
+          f"scene {scene}", flush=True)
+    return bundle
+
+
+__all__ = ["POSTER_NAME", "QPOS_NAME", "RIM_LINE", "SCHEMA_VERSION", "bundle_with_scene",
+           "decision_entry", "export_scene", "ffmpeg", "poster_time", "read_qpos", "record",
+           "replay_actions", "reparse", "rim_rows", "write_poster", "write_qpos", "write_video"]

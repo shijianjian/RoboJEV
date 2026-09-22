@@ -278,6 +278,7 @@ def test_a_bundles_video_answers_a_range_request_with_the_range(tmp_path):
 
 def test_the_replays_directory_wins_over_the_built_copy_so_a_save_needs_no_rebuild(tmp_path):
     console = build(tmp_path)
+    (console.replays / "live-1").mkdir()
     (console.replays / "index.json").write_text('[{"id":"live-1"}]')
 
     async def body(port):
@@ -362,3 +363,93 @@ def test_a_request_that_is_not_a_request_is_a_400_and_not_a_traceback(tmp_path, 
         writer.close()
 
     run(build(tmp_path), body)
+
+
+def test_scenes_and_the_catalogue_are_served_from_the_checkout_then_the_scenes_directory(tmp_path, monkeypatch):
+    from robojev import catalogue, scene_bundle
+
+    showcase, data = tmp_path / "showcase", tmp_path / "data"
+    (showcase / "scenes" / "abc" / "assets").mkdir(parents=True)
+    (showcase / "scenes" / "abc" / "scene.xml").write_text("<mujoco/>")
+    (showcase / "scenes" / "abc" / "assets" / "bowl.msh").write_bytes(b"\0\1")
+    (data / "catalogue" / "libero_spatial" / "0").mkdir(parents=True)
+    (data / "catalogue" / "libero_spatial" / "0" / "task.json").write_text(
+        '{"suite": "libero_spatial", "task_index": 0, "scene_bundle": "abc"}')
+    monkeypatch.setattr(scene_bundle, "SHOWCASE", showcase)
+    monkeypatch.setattr(catalogue, "SHOWCASE", showcase)
+    monkeypatch.setattr(catalogue, "REPO_DATA", data)
+    monkeypatch.setenv("ROBOJEV_HOME", str(tmp_path / "home"))
+    live = tmp_path / "live-scenes"
+    (live / "def").mkdir(parents=True)
+    (live / "def" / "scene.xml").write_text("<mujoco model='live'/>")
+    console = build(tmp_path, scenes=live)
+
+    async def body(port):
+        status, _, body_ = await http(port, "/scenes/abc/scene.xml")
+        assert status == 200 and body_ == b"<mujoco/>"
+        status, _, body_ = await http(port, "/scenes/abc/assets/bowl.msh")
+        assert status == 200 and body_ == b"\0\1"
+        status, _, body_ = await http(port, "/scenes/def/scene.xml")
+        assert status == 200 and b"live" in body_
+        status, _, body_ = await http(port, "/catalogue/index.json")
+        assert status == 200 and json.loads(body_) == [
+            {"suite": "libero_spatial", "tasks": [{"suite": "libero_spatial", "task_index": 0, "scene_bundle": "abc"}]}]
+        status, _, _ = await http(port, "/scenes/../replays/clip.mp4")
+        assert status == 404
+
+    run(console, body)
+
+
+def test_the_saves_and_the_repositorys_bundles_are_one_library(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "drawer").mkdir(parents=True)
+    (repo / "drawer" / "episode.json").write_text('{"id": "drawer"}')
+    (repo / "index.json").write_text('[{"id": "drawer"}, {"id": "gone"}]')
+    (repo / "scenes" / "abc").mkdir(parents=True)
+    (repo / "scenes" / "abc" / "scene.xml").write_text("<mujoco/>")
+    console = build(tmp_path, library=(repo,))
+    (console.replays / "live-1").mkdir()
+    (console.replays / "index.json").write_text('[{"id": "live-1"}, {"id": "drawer"}]')
+
+    async def body(port):
+        status, _, body_ = await http(port, "/replays/index.json")
+        # The repository's order first, a bundle once, and nothing whose directory is not there.
+        assert status == 200 and [r["id"] for r in json.loads(body_)] == ["drawer", "live-1"]
+        status, _, body_ = await http(port, "/replays/drawer/episode.json")
+        assert status == 200 and json.loads(body_) == {"id": "drawer"}
+        status, _, body_ = await http(port, "/replays/scenes/abc/scene.xml")
+        assert status == 200 and body_ == b"<mujoco/>"
+
+    run(console, body)
+
+
+def test_the_page_is_offered_weights_and_the_scripted_expert_only_for_development(tmp_path):
+    from robojev import runtime
+    from robojev.console.server import discover_weights
+
+    good = tmp_path / "checkpoints" / "robojev" / "libero_spatial"
+    good.mkdir(parents=True)
+    for name in runtime.LOCAL_CHECKPOINT_FILES:
+        (good / name).mkdir() if "." not in name else (good / name).write_bytes(b"w")
+    (good / "robojev.json").write_text('{"revision": "bb7ba09784d7"}')
+    (tmp_path / "checkpoints" / "robojev" / "half-written").mkdir()
+    weights = discover_weights(checkpoints=tmp_path / "checkpoints")
+    assert [(w["label"], w["revision"], w["policy"]) for w in weights] == [
+        ("robojev/libero_spatial", "bb7ba09784d7", "model")]
+    assert weights[0]["checkpoint"] == str(good)
+    dev = discover_weights(checkpoints=tmp_path / "nothing", dev_expert=True, jev=True)
+    assert [w["policy"] for w in dev] == ["jev", "expert"]
+
+
+def test_config_carries_the_weights(tmp_path):
+    weights = ({"id": "expert", "label": "scripted expert (dev)", "revision": "scripted-v2",
+                "policy": "expert", "checkpoint": None},)
+    console = build(tmp_path, weights=weights)
+
+    async def body(port):
+        client = await Client.connect(port)
+        config = await client.wait("config")
+        assert config["weights"] == list(weights)
+        await client.close()
+
+    run(console, body)

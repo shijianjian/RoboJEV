@@ -24,6 +24,7 @@ while paused, checked without blocking between decisions while running, which is
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 import pathlib
 import queue
@@ -35,6 +36,7 @@ import numpy as np
 
 from robojev import episode as episode_mod
 from robojev import recorder
+from robojev import scene_bundle
 from robojev.console import wire
 
 #: How long a blocking wait sits in `queue.Queue.get` before it looks up to check the clock.
@@ -53,7 +55,7 @@ SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 #: writes them -- so a console that saves an episode rewrites the file the same way the installer
 #: would, and a repository with no new bundle in it sees no diff.
 INDEX_FIELDS = ("id", "title", "instruction", "note", "success", "decisions", "max_decisions",
-                "task_index", "init_state_index", "suite", "poster")
+                "task_index", "init_state_index", "suite", "policy", "poster")
 
 
 def safe_name(name: str | None, fallback: str) -> str:
@@ -120,6 +122,8 @@ class _Run:
     error: str | None = None
     obs: dict | None = None
     result: episode_mod.EpisodeResult | None = None
+    #: The exported scene's hash, in the session's scenes directory, or None.
+    scene: str | None = None
     #: The operator reset it (or the idle timeout did). An episode that ended *itself* is held --
     #: the frames are still there and `save` still works -- but one that was told to stop is let
     #: go of at once, because the next thing the operator does is start another.
@@ -137,7 +141,7 @@ class Session:
     def __init__(self, emit, *, frames, replays_dir: pathlib.Path, base_url: str,
                  policies: tuple[str, ...] = ("expert",), render_size: int = 256,
                  idle_timeout: float = IDLE_TIMEOUT_SECONDS, env_factory=None, build_policy=None,
-                 clock=time.monotonic, note: str = ""):
+                 clock=time.monotonic, note: str = "", scenes_dir: pathlib.Path | None = None):
         self._emit = emit
         self._frames = frames
         self.replays_dir = pathlib.Path(replays_dir)
@@ -149,6 +153,11 @@ class Session:
         self._build_policy = build_policy or _default_policy
         self._clock = clock
         self.note = note
+        #: Where a live episode's scene is exported and served from (`/scenes/`). Outside the
+        #: replays directory on purpose: trying a task must not add a scene to the repository;
+        #: saving an episode copies its scene across.
+        self.scenes_dir = pathlib.Path(scenes_dir) if scenes_dir is not None else None
+        self._scene_cache: dict[str, str] = {}
 
         self._commands: queue.Queue = queue.Queue()
         self._lock = threading.Lock()
@@ -266,10 +275,48 @@ class Session:
         run = _Run(spec=spec, policy=policy, env=env, protocol=protocol,
                    episode_id=_episode_id(), started=time.time(), obs=obs)
         run.header = self._header(run)
+        run.scene = self._export_scene(env)
         self._frames.clear()
         self._publish(env, obs)
-        self._emit(wire.hello(run.header, self.video()))
+        self._emit(wire.hello(run.header, self.video(), self.scene(run)))
+        self._emit_pose(run)
         return run
+
+    def _export_scene(self, env) -> str | None:
+        """The environment's compiled scene (robopp's export), once per distinct MJCF: found in the
+        repository's `data/scenes` when it ships it, exported into the scenes directory otherwise."""
+        if self.scenes_dir is None or not hasattr(env, "scene_xml"):
+            return None
+        try:
+            xml = env.scene_xml()
+            key = hashlib.sha256(xml.encode("utf-8")).hexdigest()
+            cached = self._scene_cache.get(key)
+            # Exported once per distinct MJCF - and again if its files have gone since.
+            if cached is None or scene_bundle.locate(cached) is None and not (self.scenes_dir / cached / "scene.xml").is_file():
+                digest = scene_bundle.export_scene_bundle(xml, self.scenes_dir)
+                self._scene_cache[key] = digest
+            return self._scene_cache[key]
+        except Exception as exc:                                  # noqa: BLE001 - said, not fatal
+            self._emit(wire.error(f"scene: {type(exc).__name__}: {exc}; the page shows the "
+                                  f"cameras only"))
+            return None
+
+    def scene(self, run: _Run | None = None) -> dict | None:
+        """Where the page loads the episode's scene from, or None."""
+        run = self._run if run is None else run
+        if run is None or run.scene is None:
+            return None
+        qpos = episode_mod.env_qpos(run.env)
+        return {"hash": run.scene, "xml": f"{self.base_url}/scenes/{run.scene}/scene.xml",
+                "assets": f"{self.base_url}/scenes/{run.scene}/assets/",
+                "nq": None if qpos is None else int(qpos.shape[0])}
+
+    def _emit_pose(self, run: _Run) -> None:
+        if run.scene is None:
+            return
+        qpos = episode_mod.env_qpos(run.env)
+        if qpos is not None:
+            self._emit(wire.pose(step=run.t, qpos=qpos))
 
     @staticmethod
     def _seed(seed: int) -> None:
@@ -449,6 +496,7 @@ class Session:
         run.frames.append(frame)
         self._frames.publish(frame.images)
         run.obs = result.obs
+        self._emit_pose(run)
         if result.done and run.first_success_step is None:
             run.first_success_step = run.t
         if not is_wait:
@@ -541,10 +589,12 @@ class Session:
             return
         try:
             self.replays_dir.mkdir(parents=True, exist_ok=True)
+            # The bundle names its scene by hash; the scene stays where the console serves it from.
             bundle = recorder.record(
                 run.env, run.policy, result, out, suite=run.spec.suite, task_index=run.spec.task,
                 init_state_index=run.spec.init, engine=run.spec.policy, protocol=run.protocol,
-                started=run.started, name=out_name, note=self.note)
+                started=run.started, name=out_name, note=self.note, scene=run.scene,
+                scenes_dir=self.scenes_dir)
             write_index(self.replays_dir)
         except (Exception, SystemExit) as exc:                     # noqa: BLE001 - shown verbatim
             self._emit(wire.error(f"save: {exc}"))

@@ -84,6 +84,9 @@ class Frame:
     #: The decision behind this frame's action, straight from the `act` reply. `None` on a wait
     #: step and on the terminal frame, neither of which executes a policy action.
     decisions: dict | None = None
+    #: The simulator's `qpos` at this frame, when the frame was recorded with images: what the
+    #: web viewer poses its 3D scene with, one row per video frame.
+    qpos: np.ndarray | None = None
 
 
 @dataclasses.dataclass
@@ -104,8 +107,16 @@ def _frame(env, obs: dict, t: int, action: np.ndarray, *, images: bool, **kw) ->
         state=np.asarray(env.state_vector(obs)),
         action=action,
         images=env.images(obs) if images and hasattr(env, "images") else {},
+        qpos=env_qpos(env) if images else None,
         **kw,
     )
+
+
+def env_qpos(env) -> np.ndarray | None:
+    """The simulator's joint positions right now, or None for an environment that has none."""
+    if not hasattr(env, "ground_truth"):
+        return None
+    return np.asarray(env.ground_truth()[0], dtype=np.float32).copy()
 
 
 def _policy_obs(env, obs: dict, privileged: bool) -> dict:
@@ -217,4 +228,4 @@ def decision_count(episode: EpisodeResult) -> int:
 
 
 __all__ = ["CONTROL_FPS", "UPSTREAM_MAX_STEPS", "EpisodeResult", "Frame", "Protocol",
-           "decision_count", "for_suite", "run_episode"]
+           "decision_count", "env_qpos", "for_suite", "run_episode"]

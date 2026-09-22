@@ -17,6 +17,8 @@ venv/
 # node
 node_modules/
 web/dist/
+web/.dist-next/
+web/.dist-old/
 web/.vite/
 *.tsbuildinfo
 npm-debug.log*
@@ -31,6 +33,7 @@ npm-debug.log*
 *.safetensors
 *.jsonl
 !web/public/**/*.jsonl
+
 
 # editors and OS
 .DS_Store

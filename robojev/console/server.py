@@ -8,6 +8,7 @@ deployment gets, plus one:
   mp4 asks for a range, and a server that answers the whole file to one makes seeking silently
   unreliable;
 * `GET /frame/<camera>.png`, the live renders (`images.py`);
+* `GET /scenes/...`, the live episode's 3D scene (`robojev.scene_bundle`);
 * `GET /ws`, the protocol in `web/PROTOCOL.md`.
 
 **No dependency.** `asyncio` has the sockets, `ws.py` has RFC 6455 and `images.py` has the PNG
@@ -50,6 +51,11 @@ TYPES = {
     ".ico": "image/x-icon",
     ".txt": "text/plain; charset=utf-8",
     ".woff2": "font/woff2",
+    ".xml": "application/xml; charset=utf-8",
+    ".msh": "application/octet-stream",
+    ".stl": "application/octet-stream",
+    ".obj": "text/plain; charset=utf-8",
+    ".bin": "application/octet-stream",
 }
 
 #: How long a request line and its headers may be. A local console reads commands over the socket,
@@ -160,19 +166,34 @@ class Console:
                  dist: pathlib.Path | None = None, replays: pathlib.Path,
                  policies: tuple[str, ...] = ("expert",), default: wire.StartSpec | None = None,
                  render_size: int = 256, idle_timeout: float = IDLE_TIMEOUT_SECONDS,
-                 env_factory=None, build_policy=None, log=print):
+                 env_factory=None, build_policy=None, log=print,
+                 scenes: pathlib.Path | None = None, library: tuple[pathlib.Path, ...] = (),
+                 weights: tuple[dict, ...] | None = None):
         self.host = host
         self.port = int(port)
         self.dist = None if dist is None else pathlib.Path(dist)
         self.replays = pathlib.Path(replays)
+        #: Read-only replay directories served behind `replays` (which is where a save goes): the
+        #: checkout's `showcase/replays`, and whatever else is named. The page sees one
+        #: library - one `index.json`, one `scenes/` - made of all of them.
+        self.library = tuple(pathlib.Path(p) for p in library if pathlib.Path(p) != self.replays)
         self.policies = tuple(policies)
         self.default = default or wire.StartSpec()
+        #: The task catalogue (`robojev.catalogue.index`), read once at startup.
+        from robojev import catalogue as catalogue_mod
+
+        self.catalogue = catalogue_mod.index()
+        #: The weights the page offers. By default, one entry per engine this console serves.
+        self.weights = tuple(weights) if weights is not None else tuple(
+            {"id": p, "label": p, "revision": None, "policy": p, "checkpoint": None} for p in self.policies)
         self.log = log
         self.frames = FrameBuffer()
+        self.scenes = None if scenes is None else pathlib.Path(scenes)
         self.session = Session(
             self._emit, frames=self.frames, replays_dir=self.replays,
             base_url=f"http://{host}:{port}", policies=self.policies, render_size=render_size,
-            idle_timeout=idle_timeout, env_factory=env_factory, build_policy=build_policy)
+            idle_timeout=idle_timeout, env_factory=env_factory, build_policy=build_policy,
+            scenes_dir=self.scenes)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._out: asyncio.Queue | None = None
         self._client: object | None = None
@@ -212,7 +233,9 @@ class Console:
         where = f"http://{self.host}:{self.port}/"
         self.log(f"robojev console: {where}")
         self.log(f"robojev console: app {self.dist if self.dist else '(not built: run `cd web && npm ci && npm run build`)'}")
-        self.log(f"robojev console: replays {self.replays}")
+        self.log(f"robojev console: saves {self.replays}")
+        for root in self.library:
+            self.log(f"robojev console: replays {root}")
         self.log(f"robojev console: policies {', '.join(self.policies)}")
         async with server:
             await server.serve_forever()
@@ -265,7 +288,42 @@ class Console:
         await self._send(writer, 200, data, "image/png", request=request,
                          extra={"x-frame-seq": str(seq), "cache-control": "no-store"})
 
+    def roots(self) -> list[pathlib.Path]:
+        """Every replay directory, the writable one first."""
+        return [self.replays, *self.library]
+
+    def index(self) -> list[dict]:
+        """`index.json` for the whole library: each directory's own index, in its own (curated)
+        order, the saves directory's first and a bundle only once."""
+        import json
+
+        seen: set[str] = set()
+        out: list[dict] = []
+        for root in [*self.library, self.replays]:
+            path = root / "index.json"
+            try:
+                rows = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else []
+            except (OSError, ValueError):
+                rows = []
+            for row in rows if isinstance(rows, list) else []:
+                if isinstance(row, dict) and row.get("id") not in seen and (root / str(row.get("id"))).is_dir():
+                    seen.add(row["id"])
+                    out.append(row)
+        return out
+
     async def _static(self, request: Request, writer: asyncio.StreamWriter) -> None:
+        if request.path.rstrip("/") == "/catalogue/index.json":
+            import json
+
+            await self._send(writer, 200, (json.dumps(self.catalogue) + "\n").encode("utf-8"),
+                             TYPES[".json"], request=request, extra={"cache-control": "no-store"})
+            return
+        if request.path.rstrip("/") == "/replays/index.json":
+            import json
+
+            await self._send(writer, 200, (json.dumps(self.index(), indent=1) + "\n").encode("utf-8"),
+                             TYPES[".json"], request=request, extra={"cache-control": "no-store"})
+            return
         file = self._resolve(request.path)
         if file is None:
             await self._send(writer, 404, b"not found\n", "text/plain; charset=utf-8", request=request)
@@ -303,8 +361,18 @@ class Console:
         if any(p == ".." for p in parts):
             return None
         roots: list[pathlib.Path] = []
-        if parts and parts[0] == "replays":
-            roots.append(self.replays)
+        if parts and parts[0] in ("scenes", "catalogue"):
+            # The catalogue and the compiled scenes: the repository's `data/` first, then
+            # $ROBOJEV_HOME, then (scenes) wherever this console exports a live episode's.
+            from robojev import catalogue as catalogue_mod
+
+            kind = parts[0]
+            parts = parts[1:]
+            roots.extend(r / kind for r in catalogue_mod.roots())
+            if kind == "scenes" and self.scenes is not None:
+                roots.append(self.scenes)
+        elif parts and parts[0] == "replays":
+            roots.extend(self.roots())
             parts = parts[1:]
             if self.dist is not None:
                 roots.append(self.dist / "replays")
@@ -393,10 +461,11 @@ class Console:
             video=self.session.video(),
             state=self.session.state,
             replays="replays/",
+            weights=self.weights,
         ))
         header = self.session.header()
         if header is not None:
-            out.put_nowait(wire.hello(header, self.session.video()))
+            out.put_nowait(wire.hello(header, self.session.video(), self.session.scene()))
         out.put_nowait(self.session.snapshot())
 
     async def _read_socket(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
@@ -511,6 +580,70 @@ def available_policies(explicit: str | None = None) -> tuple[str, ...]:
     return tuple(found)
 
 
+def checkpoint_revision(directory: pathlib.Path) -> str:
+    """A local checkpoint's revision: what its metadata says, else `sha256(best.safetensors)[:12]`
+    (`runtime.local_checkpoint_revision`), cached beside it so a console starts in a second."""
+    import json
+
+    from robojev import runtime
+
+    directory = pathlib.Path(directory)
+    for name in ("robojev.json", "robopp.json"):
+        try:
+            meta = json.loads((directory / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(meta, dict) and isinstance(meta.get("revision"), str):
+            return meta["revision"]
+    weights = directory / "best.safetensors"
+    stamp = weights.stat()
+    cache = directory / ".revision"
+    key = f"{stamp.st_size}:{int(stamp.st_mtime)}"
+    try:
+        cached_key, cached = cache.read_text(encoding="utf-8").split()
+        if cached_key == key:
+            return cached
+    except (OSError, ValueError):
+        pass
+    revision = runtime.local_checkpoint_revision(directory)
+    try:
+        cache.write_text(f"{key} {revision}\n", encoding="utf-8")
+    except OSError:
+        pass
+    return revision
+
+
+def discover_weights(*, checkpoints: pathlib.Path, explicit: tuple[str, ...] = (), jev: bool = False,
+                     jev_model: str | None = None, dev_expert: bool = False) -> tuple[dict, ...]:
+    """The weights this console offers: every complete local checkpoint under `checkpoints`
+    (`<policy>/<run>/`, what `robojev train` writes), any named with `--checkpoint`, the hosted
+    Jev when a key is configured, and - for development only - the scripted expert."""
+    from robojev import runtime
+
+    found: list[pathlib.Path] = [pathlib.Path(p) for p in explicit]
+    if checkpoints.is_dir():
+        for policy_dir in sorted(p for p in checkpoints.iterdir() if p.is_dir()):
+            for run in sorted(p for p in policy_dir.iterdir() if p.is_dir()):
+                if not runtime.missing_checkpoint_files(run):
+                    found.append(run)
+    out: list[dict] = []
+    for directory in found:
+        try:
+            revision = checkpoint_revision(directory)
+        except OSError:
+            continue
+        name = f"{directory.parent.name}/{directory.name}"
+        out.append({"id": f"model:{directory}", "label": name, "revision": revision,
+                    "policy": "model", "checkpoint": str(directory)})
+    if jev:
+        out.append({"id": "jev", "label": "Jev", "revision": jev_model or "hosted",
+                    "policy": "jev", "checkpoint": jev_model})
+    if dev_expert:
+        out.append({"id": "expert", "label": "scripted expert (dev)", "revision": "scripted-v2",
+                    "policy": "expert", "checkpoint": None})
+    return tuple(out)
+
+
 def default_dist(root: pathlib.Path | None = None) -> pathlib.Path | None:
     """`web/dist`, if this checkout has one built."""
     base = root or pathlib.Path(__file__).resolve().parents[2]
@@ -518,11 +651,20 @@ def default_dist(root: pathlib.Path | None = None) -> pathlib.Path | None:
     return dist if (dist / "index.html").is_file() else None
 
 
+def default_saves() -> pathlib.Path:
+    """Where the console saves an episode: the checkout's `runs/` (not tracked), or
+    `$ROBOJEV_HOME/replays` for an install with no checkout."""
+    from robojev.home import home
+    from robojev.scene_bundle import CHECKOUT, RUNS
+
+    return RUNS if (CHECKOUT / "showcase").is_dir() else home() / "replays"
+
+
 def default_replays(root: pathlib.Path | None = None) -> pathlib.Path:
-    """`web/public/replays` in a checkout, or `./replays` anywhere else."""
-    base = root or pathlib.Path(__file__).resolve().parents[2]
-    public = base / "web" / "public" / "replays"
-    return public if public.is_dir() else pathlib.Path.cwd() / "replays"
+    """The checkout's `showcase/replays`: the runs the repository carries, read beside the saves."""
+    from robojev.scene_bundle import SHOWCASE
+
+    return (pathlib.Path(root) / "showcase" / "replays") if root is not None else SHOWCASE / "replays"
 
 
 def serve(console: Console) -> int:
@@ -538,5 +680,5 @@ def serve(console: Console) -> int:
 
 
 __all__ = ["Console", "MAX_HEADER_BYTES", "Request", "TYPES", "available_policies",
-           "content_type", "default_dist", "default_replays", "inject", "parse_range",
+           "checkpoint_revision", "content_type", "default_dist", "discover_weights", "default_replays", "default_saves", "inject", "parse_range",
            "read_request", "response_head", "serve", "suite_tasks"]

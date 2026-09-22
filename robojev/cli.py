@@ -128,6 +128,37 @@ def record(args: argparse.Namespace) -> int:
     return 0
 
 
+def catalogue(args: argparse.Namespace) -> int:
+    """Export task catalogue entries (thumbnail, start-state poses, compiled scene) - robopp's
+    catalogue export, into `data/` for a suite the repository ships and $ROBOJEV_HOME otherwise."""
+    from robojev import catalogue as catalogue_mod
+
+    root = pathlib.Path(args.root) if args.root else None
+    catalogue_mod.run_catalogue(args.suite, args.tasks or None, root=root, log=log)
+    return 0
+
+
+def scene(args: argparse.Namespace) -> int:
+    """Give existing bundles their 3D scene: replay each one's recorded actions in the simulator,
+    check the replay against its video, and write `qpos.bin` and the scene beside it."""
+    import json
+
+    from robojev import recorder
+
+    recorder.ffmpeg()
+    for raw in args.bundles:
+        out = pathlib.Path(raw)
+        bundle = json.loads((out / "episode.json").read_text(encoding="utf-8"))
+        env = build_env(bundle["suite"], int(bundle["task_index"]),
+                        render_size=args.render_size, env_seed=args.env_seed)
+        try:
+            recorder.bundle_with_scene(out, env, init_state_index=int(bundle["init_state_index"]),
+                                       seed=args.seed)
+        finally:
+            env.close()
+    return 0
+
+
 # ------------------------------------------------------------------------------------ console
 
 def console(args: argparse.Namespace) -> int:
@@ -141,8 +172,12 @@ def console(args: argparse.Namespace) -> int:
     from robojev.console import server as console_mod
     from robojev.console import wire
 
-    policies = console_mod.available_policies()
-    if args.policy not in policies:
+    # The page offers weights, not engines: the checkpoints this console finds, and the hosted Jev
+    # when a key is configured. The scripted expert is for development and tests only.
+    dev_expert = bool(args.dev_expert) or args.policy == "expert"
+    engines = console_mod.available_policies()
+    policies = tuple(p for p in engines if p != "expert" or dev_expert)
+    if args.policy is not None and args.policy not in policies:
         why = {
             "model": "a local checkpoint needs torch: pip install 'robojev[model]'. LIBERO pins "
                      "Python 3.10 and NanoJev's predictor pins 3.14, so the two share an "
@@ -153,20 +188,38 @@ def console(args: argparse.Namespace) -> int:
         print(f"console: --policy {args.policy} is not available here: {why}", file=sys.stderr)
         print(f"console: this interpreter serves {', '.join(policies)}", file=sys.stderr)
         return 2
+    from robojev.home import checkpoints_dir
+    from robojev.home import home as home_dir
+
+    weights = console_mod.discover_weights(
+        checkpoints=checkpoints_dir(),
+        explicit=(args.checkpoint,) if args.checkpoint and args.policy in (None, "model") else (),
+        jev="jev" in policies, jev_model=args.checkpoint if args.policy == "jev" else None,
+        dev_expert=dev_expert)
+    weights = tuple(w for w in weights if w["policy"] in policies)
+    if not weights:
+        print("console: no weights to offer: no checkpoint under $ROBOJEV_HOME/checkpoints, none "
+              "given with --checkpoint, and no $JEV_API_KEY (the scripted expert is --dev-expert)",
+              file=sys.stderr)
+    first = weights[0] if weights else {"policy": args.policy or "model", "checkpoint": args.checkpoint}
 
     dist = pathlib.Path(args.dist) if args.dist else console_mod.default_dist()
     if dist is not None and not (dist / "index.html").is_file():
         print(f"console: {dist} has no index.html; build the app with "
               f"`cd web && npm ci && npm run build`", file=sys.stderr)
         return 2
-    replays = pathlib.Path(args.replays_dir) if args.replays_dir else console_mod.default_replays()
+    replays = pathlib.Path(args.replays_dir) if args.replays_dir else console_mod.default_saves()
+    # The repository's own bundles are read beside the saves, never written to.
+    library = tuple(p for p in (console_mod.default_replays(),) if p.is_dir() and p != replays)
     default = wire.StartSpec(suite=args.suite, task=args.task, init=args.init,
-                             policy=args.policy, selection=args.selection,
-                             checkpoint=args.checkpoint, seed=args.seed,
+                             policy=args.policy or first["policy"], selection=args.selection,
+                             checkpoint=args.checkpoint or first["checkpoint"], seed=args.seed,
                              max_steps=args.max_steps)
     return console_mod.serve(console_mod.Console(
         host=args.host, port=args.port, dist=dist, replays=replays, policies=policies,
-        default=default, render_size=args.render_size, idle_timeout=args.idle_timeout, log=log))
+        default=default, render_size=args.render_size, idle_timeout=args.idle_timeout, log=log,
+        scenes=pathlib.Path(args.scenes_dir) if args.scenes_dir else home_dir() / "scenes",
+        library=library, weights=weights))
 
 
 # ------------------------------------------------------------------------------------ harvest
@@ -413,21 +466,44 @@ def build_parser() -> argparse.ArgumentParser:
                           "existing bundle at --out and rewrite its episode.json")
     rec.set_defaults(func=record)
 
+    cat = sub.add_parser("catalogue", help="export task thumbnails, start-state poses and compiled "
+                                           "scenes for the Dataset tab")
+    cat.add_argument("--suite", default="libero_spatial")
+    cat.add_argument("--tasks", type=int, nargs="*", default=None, help="task indices; all by default")
+    cat.add_argument("--root", default=None,
+                     help="write here instead: data/ for a suite the repository ships, else $ROBOJEV_HOME")
+    cat.set_defaults(func=catalogue)
+
+    sc = sub.add_parser("scene", help="add the 3D scene to existing bundles by replaying their "
+                                      "recorded actions")
+    sc.add_argument("bundles", nargs="+", help="bundle directories")
+    sc.add_argument("--seed", type=int, default=7)
+    sc.add_argument("--env-seed", type=int, default=0)
+    sc.add_argument("--render-size", type=int, default=256)
+    sc.set_defaults(func=scene)
+
     c = sub.add_parser("console", help="a local server: the web app, plus one live episode")
     _episode_flags(c)
     c.add_argument("--host", default="127.0.0.1",
                    help="the interface to bind. Loopback by default and on purpose: the console "
                         "is unauthenticated and drives a simulator")
     c.add_argument("--port", type=int, default=8765)
+    c.add_argument("--dev-expert", action="store_true",
+                   help="also offer the scripted expert (development and tests; the page otherwise "
+                        "offers checkpoints only)")
     c.add_argument("--dist", default=None,
                    help="the built front end to serve; defaults to web/dist in this checkout")
     c.add_argument("--replays-dir", default=None,
-                   help="where `save` writes a bundle and where the episode strip reads them; "
-                        "defaults to web/public/replays in this checkout")
+                   help="where `save` writes a bundle; defaults to $ROBOJEV_HOME/replays "
+                        "(runs/ in a checkout). The checkout's showcase/replays is served beside it")
+    c.add_argument("--scenes-dir", default=None,
+                   help="where a live episode's scene is exported when the repository's data/scenes "
+                        "does not have it; defaults to $ROBOJEV_HOME/scenes")
     c.add_argument("--idle-timeout", type=float, default=900.0,
                    help="seconds without a command before the episode is closed and the simulator "
                         "let go of")
-    c.set_defaults(func=console)
+    # No engine unless one is named: the page offers weights, and the first of them is the default.
+    c.set_defaults(func=console, policy=None)
 
     h = sub.add_parser("harvest", help="training rows from the scripted expert's rollouts")
     h.add_argument("--suite", default="libero_spatial")
