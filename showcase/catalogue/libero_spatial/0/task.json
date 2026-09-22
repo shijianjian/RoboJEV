@@ -1,0 +1,47 @@
+{
+ "fixtures": {
+  "flat_stove": [
+   "flat_stove_1"
+  ],
+  "table": [
+   "main_table"
+  ],
+  "wooden_cabinet": [
+   "wooden_cabinet_1"
+  ]
+ },
+ "goal": [
+  [
+   "on",
+   "akita_black_bowl_1",
+   "plate_1"
+  ]
+ ],
+ "instruction": "pick up the black bowl between the plate and the ramekin and place it on the plate",
+ "max_steps": 220,
+ "n_init_states": 50,
+ "name": "pick_up_the_black_bowl_between_the_plate_and_the_ramekin_and_place_it_on_the_plate",
+ "objects": {
+  "akita_black_bowl": [
+   "akita_black_bowl_1",
+   "akita_black_bowl_2"
+  ],
+  "cookies": [
+   "cookies_1"
+  ],
+  "glazed_rim_porcelain_ramekin": [
+   "glazed_rim_porcelain_ramekin_1"
+  ],
+  "plate": [
+   "plate_1"
+  ]
+ },
+ "objects_of_interest": [
+  "akita_black_bowl_1",
+  "plate_1"
+ ],
+ "scene_bundle": "6cc742613e05c172553419f33a1acb65a9b2a45104fba23820cbe2d93280e3ce",
+ "suite": "libero_spatial",
+ "task_index": 0,
+ "thumbnail": "thumb.png"
+}

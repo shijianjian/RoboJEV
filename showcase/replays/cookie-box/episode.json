@@ -1,0 +1,8118 @@
+{
+ "schema_version": 2,
+ "id": "cookie-box",
+ "suite": "libero_spatial",
+ "task_index": 3,
+ "init_state_index": 0,
+ "instruction": "pick up the black bowl on the cookie box and place it on the plate",
+ "title": "pick up the black bowl on the cookie box and place it on the plate",
+ "note": "Onto the cookie box: the destination is not the table, so the place waypoint sits above a box and the carry stage has to clear it.",
+ "policy": "robojev",
+ "checkpoint_revision": "bb7ba09784d7",
+ "checkpoint_repo": "local",
+ "questions_version": "v2",
+ "success": true,
+ "terminated_by": "success",
+ "error": null,
+ "steps": 117,
+ "control_rate": 20.0,
+ "wait_steps": 10,
+ "execute_steps": 5,
+ "max_steps": 220,
+ "max_decisions": 44,
+ "total_frames": 128,
+ "duration_s": 6.4,
+ "recorded_at": "2026-09-21T21:47:54Z",
+ "wall_seconds": 72.1,
+ "media": {
+  "agentview": {
+   "path": "agentview.mp4",
+   "width": 256,
+   "height": 256,
+   "fps": 20.0,
+   "frames": 128,
+   "codec": "h264"
+  },
+  "wrist": {
+   "path": "wrist.mp4",
+   "width": 256,
+   "height": 256,
+   "fps": 20.0,
+   "frames": 128,
+   "codec": "h264"
+  }
+ },
+ "decisions": [
+  {
+   "index": 0,
+   "step": 0,
+   "control_step": 10,
+   "t": 0.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 1 of 44; 43 left.\nGripper: open 7.7 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -x, turn -45, room 11.4 cm -> fits\n  F: +x, turn +135, room 26.0 cm -> fits\n  G: -y, turn +45, room 14.4 cm -> fits\n  H: +y, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x +27.4, y -1.8, z -15.2   [tolerance 0.3; arrived within 1.3]\n  x: +27.4 is outside tolerance -> not aligned\n  y: -1.8 is outside tolerance -> not aligned\n  z: -15.2 is outside tolerance -> not aligned\nLargest remaining offset: 27.4 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x +22.9 y -27.6 z -4.8; cookies_1 x +27.4 y +3.2 z -26.5; ramekin_1 x -0.8 y +21.9 z -27.5; plate_1 x +27.6 y +19.8 z -27.1.\nEvents: t=0 start, waypoint 31.4 cm away\nAttempts: grasps 0, held 0. Closest so far 31.4 cm at t=0. Moved 0.0 cm, net 0.0 cm (not looping).\nLast 3: none yet.",
+   "questions": {
+    "target": {
+     "candidates": [
+      {
+       "id": "bowl_1",
+       "p": 0.998939
+      },
+      {
+       "id": "bowl_2",
+       "p": 0.001061
+      },
+      {
+       "id": "cabinet_1",
+       "p": 0.0
+      },
+      {
+       "id": "cookies_1",
+       "p": 0.0
+      },
+      {
+       "id": "plate_1",
+       "p": 0.0
+      },
+      {
+       "id": "ramekin_1",
+       "p": 0.0
+      },
+      {
+       "id": "stove_1",
+       "p": 0.0
+      }
+     ],
+     "choice": "bowl_1",
+     "overridden": false
+    },
+    "destination": {
+     "candidates": [
+      {
+       "id": "bowl_1",
+       "p": 0.0
+      },
+      {
+       "id": "bowl_2",
+       "p": 0.0
+      },
+      {
+       "id": "cabinet_1",
+       "p": 0.0
+      },
+      {
+       "id": "cookies_1",
+       "p": 0.0
+      },
+      {
+       "id": "plate_1",
+       "p": 1.0
+      },
+      {
+       "id": "ramekin_1",
+       "p": 0.0
+      },
+      {
+       "id": "stove_1",
+       "p": 0.0
+      }
+     ],
+     "choice": "plate_1",
+     "overridden": false
+    },
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": {
+    "mode": "rule",
+    "source": "rule",
+    "sources": {
+     "target": "rule",
+     "destination": "rule"
+    },
+    "target": "akita_black_bowl_1",
+    "destination": "plate_1",
+    "model": {
+     "target": "akita_black_bowl_1",
+     "destination": "plate_1"
+    },
+    "model_agrees": true,
+    "rule": {
+     "target": "akita_black_bowl_1",
+     "destination": "plate_1"
+    },
+    "probability": {
+     "target": 0.998939,
+     "destination": 1.0
+    },
+    "min_probability": 0.5,
+    "regrounded": false
+   },
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    27.4,
+    -1.8,
+    -15.2
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-x",
+     "turn_deg": -45,
+     "room_cm": 11.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+x",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "-y",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "+y",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    1.0,
+    -0.333333,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 1,
+   "step": 1,
+   "control_step": 15,
+   "t": 0.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 2 of 44; 42 left.\nGripper: open 7.8 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -x, turn -45, room 11.4 cm -> fits\n  F: +x, turn +135, room 26.0 cm -> fits\n  G: -y, turn +45, room 14.4 cm -> fits\n  H: +y, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x +22.7, y +0.0, z -9.0   [tolerance 0.3; arrived within 1.3]\n  x: +22.7 is outside tolerance -> not aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: -9.0 is outside tolerance -> not aligned\nLargest remaining offset: 22.7 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x +18.2 y -25.8 z +1.4; cookies_1 x +22.7 y +5.0 z -20.3; ramekin_1 x -5.5 y +23.7 z -21.3; plate_1 x +22.9 y +21.6 z -21.0.\nEvents: t=0 start, waypoint 31.4 cm away\nAttempts: grasps 0, held 0. Closest so far 24.4 cm at t=5. Moved 8.0 cm, net 8.0 cm (not looping).\nLast 3: t=0 x+l y-m z-l, closed -> 7.0 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    22.7,
+    -0.0,
+    -9.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-x",
+     "turn_deg": -45,
+     "room_cm": 11.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+x",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "-y",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "+y",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    1.0,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 2,
+   "step": 2,
+   "control_step": 20,
+   "t": 1.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 3 of 44; 41 left.\nGripper: open 7.8 cm; holding nothing.\nWrist yaw error: -0.2 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x +17.1, y +0.4, z -1.5   [tolerance 0.3; arrived within 1.3]\n  x: +17.1 is outside tolerance -> not aligned\n  y: +0.4 is outside tolerance -> not aligned\n  z: -1.5 is outside tolerance -> not aligned\nLargest remaining offset: 17.1 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x +12.5 y -25.4 z +8.9; cookies_1 x +17.1 y +5.4 z -12.8; ramekin_1 x -11.1 y +24.1 z -13.8; plate_1 x +17.3 y +22.0 z -13.5.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm\nAttempts: grasps 0, held 0. Closest so far 17.1 cm at t=10. Moved 17.3 cm, net 17.2 cm (not looping).\nLast 3: t=0 x+l y-m z-l, closed -> 7.0 cm closer | t=5 x+l z-l, closed -> 7.3 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    17.1,
+    0.4,
+    -1.5
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    1.0,
+    0.1,
+    -0.333333,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 3,
+   "step": 3,
+   "control_step": 25,
+   "t": 1.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 4 of 44; 40 left.\nGripper: open 7.9 cm; holding nothing.\nWrist yaw error: -0.2 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x +11.3, y -0.1, z +1.9   [tolerance 0.3; arrived within 1.3]\n  x: +11.3 is outside tolerance -> not aligned\n  y: -0.1 is inside tolerance -> aligned\n  z: +1.9 is outside tolerance -> not aligned\nLargest remaining offset: 11.3 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x +6.7 y -25.9 z +12.3; cookies_1 x +11.3 y +4.9 z -9.4; ramekin_1 x -16.9 y +23.6 z -10.4; plate_1 x +11.5 y +21.5 z -10.0.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm\nAttempts: grasps 0, held 0. Closest so far 11.4 cm at t=15. Moved 24.1 cm, net 23.6 cm (not looping).\nLast 3: t=0 x+l y-m z-l, closed -> 7.0 cm closer | t=5 x+l z-l, closed -> 7.3 cm closer | t=10 x+l y+s z-m, closed -> 5.7 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    11.3,
+    -0.1,
+    1.9
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    1.0,
+    0.0,
+    0.333333,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 4,
+   "step": 4,
+   "control_step": 30,
+   "t": 1.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 5 of 44; 39 left.\nGripper: open 7.9 cm; holding nothing.\nWrist yaw error: -0.1 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x +5.3, y -0.3, z +0.7   [tolerance 0.3; arrived within 1.3]\n  x: +5.3 is outside tolerance -> not aligned\n  y: -0.3 is inside tolerance -> aligned\n  z: +0.7 is outside tolerance -> not aligned\nLargest remaining offset: 5.3 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x +0.8 y -26.1 z +11.1; cookies_1 x +5.3 y +4.7 z -10.6; ramekin_1 x -22.9 y +23.4 z -11.6; plate_1 x +5.5 y +21.4 z -11.3.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm\nAttempts: grasps 0, held 0. Closest so far 5.4 cm at t=20. Moved 30.2 cm, net 27.2 cm (not looping).\nLast 3: t=5 x+l z-l, closed -> 7.3 cm closer | t=10 x+l y+s z-m, closed -> 5.7 cm closer | t=15 x+l z+m, closed -> 6.1 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    5.3,
+    -0.3,
+    0.7
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    1.0,
+    0.0,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 5,
+   "step": 5,
+   "control_step": 35,
+   "t": 1.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (approach). Done: nothing. Decision 6 of 44; 38 left.\nGripper: open 7.9 cm; holding nothing.\nWrist yaw error: -0.1 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (approach: 8 cm above the rim of bowl_1, -y side): x -0.5, y -0.3, z +0.3   [tolerance 0.3; arrived within 1.3]\n  x: -0.5 is outside tolerance -> not aligned\n  y: -0.3 is inside tolerance -> aligned\n  z: +0.3 is inside tolerance -> aligned\nLargest remaining offset: 0.5 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -5.0 y -26.1 z +10.7; cookies_1 x -0.5 y +4.7 z -11.0; ramekin_1 x -28.6 y +23.4 z -12.0; plate_1 x -0.3 y +21.3 z -11.7.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 36.0 cm, net 31.9 cm (not looping).\nLast 3: t=10 x+l y+s z-m, closed -> 5.7 cm closer | t=15 x+l z+m, closed -> 6.1 cm closer | t=20 x+l z+s, closed -> 4.7 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 2e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999998
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "approach",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "approach: 8 cm above the rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -0.5,
+    -0.3,
+    0.3
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.1,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 6,
+   "step": 6,
+   "control_step": 40,
+   "t": 2.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (descend). Done: nothing. Decision 7 of 44; 37 left.\nGripper: open 7.9 cm; holding nothing.\nWrist yaw error: -0.1 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (descend: rim of bowl_1, -y side): x -2.2, y -0.2, z -8.9   [tolerance 0.3; arrived within 1.3]\n  x: -2.2 is outside tolerance -> not aligned\n  y: -0.2 is inside tolerance -> aligned\n  z: -8.9 is outside tolerance -> not aligned\nLargest remaining offset: 8.9 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -6.8 y -26.0 z +9.5; cookies_1 x -2.2 y +4.8 z -12.2; ramekin_1 x -30.4 y +23.5 z -13.2; plate_1 x -2.0 y +21.4 z -12.9.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 38.1 cm, net 32.9 cm (not looping).\nLast 3: t=15 x+l z+m, closed -> 6.1 cm closer | t=20 x+l z+s, closed -> 4.7 cm closer | t=25 x-s, closed -> 8.5 cm farther",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 1e-06
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "descend",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "descend: rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -2.2,
+    -0.2,
+    -8.9
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.333333,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 7,
+   "step": 7,
+   "control_step": 45,
+   "t": 2.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (descend). Done: nothing. Decision 8 of 44; 36 left.\nGripper: open 7.9 cm; holding nothing.\nWrist yaw error: -0.1 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (descend: rim of bowl_1, -y side): x -2.5, y -0.1, z -4.8   [tolerance 0.3; arrived within 1.3]\n  x: -2.5 is outside tolerance -> not aligned\n  y: -0.1 is inside tolerance -> aligned\n  z: -4.8 is outside tolerance -> not aligned\nLargest remaining offset: 4.8 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -7.0 y -25.9 z +13.6; cookies_1 x -2.5 y +4.9 z -8.1; ramekin_1 x -30.7 y +23.6 z -9.1; plate_1 x -2.3 y +21.5 z -8.8.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 42.2 cm, net 35.1 cm (not looping).\nLast 3: t=20 x+l z+s, closed -> 4.7 cm closer | t=25 x-s, closed -> 8.5 cm farther | t=30 x-m z-l, closed -> 3.8 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 1e-06
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "descend",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "descend: rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -2.5,
+    -0.1,
+    -4.8
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.333333,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 8,
+   "step": 8,
+   "control_step": 50,
+   "t": 2.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (descend). Done: nothing. Decision 9 of 44; 35 left.\nGripper: open 8.0 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (descend: rim of bowl_1, -y side): x -2.0, y -0.1, z +0.4   [tolerance 0.3; arrived within 1.3]\n  x: -2.0 is outside tolerance -> not aligned\n  y: -0.1 is inside tolerance -> aligned\n  z: +0.4 is outside tolerance -> not aligned\nLargest remaining offset: 2.0 cm (medium range: 1.17 to 3.50).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -6.5 y -25.9 z +19.0; cookies_1 x -2.0 y +4.9 z -2.8; ramekin_1 x -30.2 y +23.6 z -3.7; plate_1 x -1.8 y +21.5 z -3.4.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 47.6 cm, net 37.9 cm (not looping).\nLast 3: t=25 x-s, closed -> 8.5 cm farther | t=30 x-m z-l, closed -> 3.8 cm closer | t=35 x-m z-l, closed -> 3.4 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "descend",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "descend: rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -2.0,
+    -0.1,
+    0.4
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.333333,
+    0.0,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 9,
+   "step": 9,
+   "control_step": 55,
+   "t": 2.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (descend). Done: nothing. Decision 10 of 44; 34 left.\nGripper: open 8.0 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.4 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (descend: rim of bowl_1, -y side): x -1.5, y +0.0, z -0.5   [tolerance 0.3; arrived within 1.3]\n  x: -1.5 is outside tolerance -> not aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: -0.5 is outside tolerance -> not aligned\nLargest remaining offset: 1.5 cm (medium range: 1.17 to 3.50).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -6.0 y -25.8 z +17.9; cookies_1 x -1.5 y +5.0 z -3.8; ramekin_1 x -29.7 y +23.7 z -4.8; plate_1 x -1.3 y +21.6 z -4.5.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 48.9 cm, net 36.8 cm (not looping).\nLast 3: t=30 x-m z-l, closed -> 3.8 cm closer | t=35 x-m z-l, closed -> 3.4 cm closer | t=40 x-m z+s, closed -> 0.4 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "descend",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "descend: rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -1.5,
+    0.0,
+    -0.5
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.333333,
+    0.0,
+    -0.1,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 10,
+   "step": 10,
+   "control_step": 60,
+   "t": 3.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: reach (descend). Done: nothing. Decision 11 of 44; 33 left.\nGripper: open 8.0 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.4 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (descend: rim of bowl_1, -y side): x -0.2, y +0.0, z -0.6   [tolerance 0.3; arrived within 1.3]\n  x: -0.2 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: -0.6 is outside tolerance -> not aligned\nLargest remaining offset: 0.6 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.7 y -25.8 z +17.8; cookies_1 x -0.1 y +5.1 z -3.9; ramekin_1 x -28.3 y +23.8 z -4.9; plate_1 x +0.1 y +21.7 z -4.6.\nEvents: t=0 start, waypoint 31.4 cm away | t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm\nAttempts: grasps 0, held 0. Closest so far 0.6 cm at t=25. Moved 50.2 cm, net 35.6 cm (not looping).\nLast 3: t=35 x-m z-l, closed -> 3.4 cm closer | t=40 x-m z+s, closed -> 0.4 cm closer | t=45 x-m z-s, closed -> 1.0 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.0
+      },
+      {
+       "id": "false",
+       "p": 1.0
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 1.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "reach",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "reach",
+   "substage": "descend",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "descend: rim of bowl_1, -y side",
+   "waypoint_cm": [
+    -0.2,
+    0.0,
+    -0.6
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    -0.1,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 11,
+   "step": 11,
+   "control_step": 65,
+   "t": 3.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: grasp (close). Done: reach. Decision 12 of 44; 32 left.\nGripper: open 8.0 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.4 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 24.0 cm -> fits\nWaypoint (close: hold still and shut the fingers): x +0.0, y +0.0, z +0.0   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +0.0 is inside tolerance -> aligned\nLargest remaining offset: 0.0 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.6 y -25.8 z +18.9; cookies_1 x +0.9 y +5.0 z -2.8; ramekin_1 x -27.3 y +23.7 z -3.8; plate_1 x +1.1 y +21.7 z -3.5.\nEvents: t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm | t=55 grasp\nAttempts: grasps 0, held 0. Closest so far 0.0 cm at t=55. Moved 51.7 cm, net 35.6 cm (not looping).\nLast 3: t=40 x-m z+s, closed -> 0.4 cm closer | t=45 x-m z-s, closed -> 1.0 cm closer | t=50 z-s, closed -> 0.6 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 2e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999998
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 0.999995
+      },
+      {
+       "id": "B",
+       "p": 1e-06
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 3e-06
+      },
+      {
+       "id": "F",
+       "p": 1e-06
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.999999
+      },
+      {
+       "id": "false",
+       "p": 1e-06
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 1.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "grasp",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "grasp",
+   "substage": "close",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "close: hold still and shut the fingers",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 24.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 12,
+   "step": 12,
+   "control_step": 70,
+   "t": 3.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: grasp (close). Done: reach. Decision 13 of 44; 31 left.\nGripper: open 5.1 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.4 cm -> fits\n  B: +y, turn +180, room 26.8 cm -> fits\n  C: -x, turn -90, room 17.3 cm -> fits\n  D: +x, turn +90, room 21.3 cm -> fits\n  E: -y, turn -45, room 11.3 cm -> fits\n  F: +y, turn +135, room 26.0 cm -> fits\n  G: +x, turn +45, room 14.4 cm -> fits\n  H: -x, turn -135, room 23.9 cm -> fits\nWaypoint (close: hold still and shut the fingers): x +0.0, y +0.0, z +0.0   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +0.0 is inside tolerance -> aligned\nLargest remaining offset: 0.0 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.1 y -25.5 z +19.0; cookies_1 x +1.4 y +5.4 z -2.7; ramekin_1 x -26.8 y +24.0 z -3.7; plate_1 x +1.6 y +22.0 z -3.3.\nEvents: t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm | t=55 grasp\nAttempts: grasps 0, held 0. Closest so far 0.0 cm at t=55. Moved 52.3 cm, net 35.3 cm (not looping).\nLast 3: t=45 x-m z-s, closed -> 1.0 cm closer | t=50 z-s, closed -> 0.6 cm closer | t=55 hold, closed -> 0.0 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 0.999996
+      },
+      {
+       "id": "B",
+       "p": 1e-06
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 2e-06
+      },
+      {
+       "id": "F",
+       "p": 1e-06
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 1.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "grasp",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "grasp",
+   "substage": "close",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "close: hold still and shut the fingers",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 26.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 13,
+   "step": 13,
+   "control_step": 75,
+   "t": 3.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: grasp (close). Done: reach. Decision 14 of 44; 30 left.\nGripper: closed 1.6 cm; holding nothing.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.1 cm -> fits\n  B: +y, turn +180, room 26.5 cm -> fits\n  C: -x, turn -90, room 17.0 cm -> fits\n  D: +x, turn +90, room 21.0 cm -> fits\n  E: -y, turn -45, room 11.1 cm -> fits\n  F: +y, turn +135, room 25.7 cm -> fits\n  G: +x, turn +45, room 14.1 cm -> fits\n  H: -x, turn -135, room 23.7 cm -> fits\nWaypoint (close: hold still and shut the fingers): x +0.0, y +0.0, z +0.0   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +0.0 is inside tolerance -> aligned\nLargest remaining offset: 0.0 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.1 y -25.6 z +18.9; cookies_1 x +1.4 y +5.2 z -2.8; ramekin_1 x -26.7 y +23.9 z -3.8; plate_1 x +1.7 y +21.8 z -3.5.\nEvents: t=10 within 20 cm | t=20 within 10 cm | t=25 within 5 cm | t=55 grasp\nAttempts: grasps 0, held 0. Closest so far 0.0 cm at t=55. Moved 52.6 cm, net 35.1 cm (not looping).\nLast 3: t=50 z-s, closed -> 0.6 cm closer | t=55 hold, closed -> 0.0 cm closer | t=60 hold, closed -> 0.0 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 0.999996
+      },
+      {
+       "id": "B",
+       "p": 1e-06
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 2e-06
+      },
+      {
+       "id": "F",
+       "p": 1e-06
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.999999
+      },
+      {
+       "id": "false",
+       "p": 1e-06
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 1.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "grasp",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "grasp",
+   "substage": "close",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "close: hold still and shut the fingers",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 17.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 21.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 11.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 25.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.1,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 14,
+   "step": 14,
+   "control_step": 80,
+   "t": 4.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: lift (lift). Done: reach, grasp. Decision 15 of 44; 29 left.\nGripper: closed 1.3 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.0 cm -> fits\n  B: +y, turn +180, room 26.3 cm -> fits\n  C: -x, turn -90, room 16.8 cm -> fits\n  D: +x, turn +90, room 20.9 cm -> fits\n  E: -y, turn -45, room 10.9 cm -> fits\n  F: +y, turn +135, room 25.6 cm -> fits\n  G: +x, turn +45, room 14.0 cm -> fits\n  H: -x, turn -135, room 23.5 cm -> fits\nWaypoint (lift: clear above bowl_1): x +0.0, y +0.0, z +12.4   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +12.4 is outside tolerance -> not aligned\nLargest remaining offset: 12.4 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.1 y -25.8 z +18.7; cookies_1 x +1.3 y +5.0 z -3.0; ramekin_1 x -26.8 y +23.7 z -4.0; plate_1 x +1.6 y +21.7 z -3.7.\nEvents: t=25 within 5 cm | t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 52.8 cm, net 35.1 cm (not looping).\nLast 3: t=55 hold, closed -> 0.0 cm closer | t=60 hold, closed -> 0.0 cm closer | t=65 hold, closed -> 12.4 cm farther",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 4e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999995
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 1.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "lift",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "lift",
+   "substage": "lift",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lift: clear above bowl_1",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    12.4
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 16.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 20.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 10.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 25.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.0,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 15,
+   "step": 15,
+   "control_step": 85,
+   "t": 4.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: lift (lift). Done: reach, grasp. Decision 16 of 44; 28 left.\nGripper: closed 1.2 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.0 cm -> fits\n  B: +y, turn +180, room 26.3 cm -> fits\n  C: -x, turn -90, room 16.8 cm -> fits\n  D: +x, turn +90, room 20.9 cm -> fits\n  E: -y, turn -45, room 10.7 cm -> fits\n  F: +y, turn +135, room 25.6 cm -> fits\n  G: +x, turn +45, room 14.0 cm -> fits\n  H: -x, turn -135, room 23.4 cm -> fits\nWaypoint (lift: clear above bowl_1): x +0.0, y +0.0, z +6.7   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +6.7 is outside tolerance -> not aligned\nLargest remaining offset: 6.7 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.6 y -25.7 z +13.0; cookies_1 x +0.9 y +5.0 z -8.7; ramekin_1 x -27.2 y +23.8 z -9.8; plate_1 x +1.1 y +21.7 z -9.4.\nEvents: t=25 within 5 cm | t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 58.6 cm, net 31.9 cm (not looping).\nLast 3: t=60 hold, closed -> 0.0 cm closer | t=65 hold, closed -> 12.4 cm farther | t=70 z+l, closed -> 5.7 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 5e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999995
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 1.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "lift",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "lift",
+   "substage": "lift",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lift: clear above bowl_1",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    6.7
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 16.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 20.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 10.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 25.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.0,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 16,
+   "step": 16,
+   "control_step": 90,
+   "t": 4.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: lift (lift). Done: reach, grasp. Decision 17 of 44; 27 left.\nGripper: closed 1.2 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 9.1 cm -> fits\n  B: +y, turn +180, room 26.2 cm -> fits\n  C: -x, turn -90, room 16.7 cm -> fits\n  D: +x, turn +90, room 20.9 cm -> fits\n  E: -y, turn -45, room 10.7 cm -> fits\n  F: +y, turn +135, room 25.6 cm -> fits\n  G: +x, turn +45, room 14.0 cm -> fits\n  H: -x, turn -135, room 23.3 cm -> fits\nWaypoint (lift: clear above bowl_1): x +0.0, y +0.0, z +0.1   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.0 is inside tolerance -> aligned\n  z: +0.1 is inside tolerance -> aligned\nLargest remaining offset: 0.0 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.7 y -25.7 z +6.2; cookies_1 x +0.8 y +5.1 z -15.5; ramekin_1 x -27.3 y +23.8 z -16.5; plate_1 x +1.1 y +21.7 z -16.2.\nEvents: t=25 within 5 cm | t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 65.3 cm, net 28.8 cm (looping).\nLast 3: t=65 hold, closed -> 12.4 cm farther | t=70 z+l, closed -> 5.7 cm closer | t=75 z+l, closed -> 6.7 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 0.999997
+      },
+      {
+       "id": "B",
+       "p": 1e-06
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 2e-06
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 1.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "lift",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "lift",
+   "substage": "lift",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lift: clear above bowl_1",
+   "waypoint_cm": [
+    0.0,
+    0.0,
+    0.1
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 9.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 16.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 20.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 10.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 25.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 14.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 9.1,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 17,
+   "step": 17,
+   "control_step": 95,
+   "t": 4.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: carry (carry). Done: reach, grasp, lift. Decision 18 of 44; 26 left.\nGripper: closed 1.1 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 8.8 cm -> fits\n  B: +y, turn +180, room 26.1 cm -> fits\n  C: -x, turn -90, room 16.6 cm -> fits\n  D: +x, turn +90, room 20.7 cm -> fits\n  E: -y, turn -45, room 10.6 cm -> fits\n  F: +y, turn +135, room 25.4 cm -> fits\n  G: +x, turn +45, room 13.8 cm -> fits\n  H: -x, turn -135, room 23.2 cm -> fits\nWaypoint (carry: bowl_1 above plate_1): x +0.1, y +17.4, z -0.7   [tolerance 0.3; arrived within 1.3]\n  x: +0.1 is inside tolerance -> aligned\n  y: +17.4 is outside tolerance -> not aligned\n  z: -0.7 is outside tolerance -> not aligned\nLargest remaining offset: 17.4 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.5 y -25.7 z +5.4; cookies_1 x +1.0 y +5.1 z -16.3; ramekin_1 x -27.1 y +23.8 z -17.3; plate_1 x +1.2 y +21.7 z -17.0.\nEvents: t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 66.2 cm, net 28.3 cm (looping).\nLast 3: t=70 z+l, closed -> 5.7 cm closer | t=75 z+l, closed -> 6.7 cm closer | t=80 hold, closed -> 17.3 cm farther",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 1.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "carry",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "carry",
+   "substage": "carry",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "carry: bowl_1 above plate_1",
+   "waypoint_cm": [
+    0.1,
+    17.4,
+    -0.7
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 8.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 26.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 16.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 20.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 10.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 25.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 13.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 23.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 8.8,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    1.0,
+    -0.1,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 18,
+   "step": 18,
+   "control_step": 100,
+   "t": 5.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: carry (carry). Done: reach, grasp, lift. Decision 19 of 44; 25 left.\nGripper: closed 0.7 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 12.9 cm -> fits\n  B: +y, turn +180, room 30.5 cm -> fits\n  C: -x, turn -90, room 20.8 cm -> fits\n  D: +x, turn +90, room 24.4 cm -> fits\n  E: -y, turn -45, room 15.2 cm -> fits\n  F: +y, turn +135, room 29.2 cm -> fits\n  G: +x, turn +45, room 17.6 cm -> fits\n  H: -x, turn -135, room 27.5 cm -> fits\nWaypoint (carry: bowl_1 above plate_1): x +1.5, y +12.9, z +1.6   [tolerance 0.3; arrived within 1.3]\n  x: +1.5 is outside tolerance -> not aligned\n  y: +12.9 is outside tolerance -> not aligned\n  z: +1.6 is outside tolerance -> not aligned\nLargest remaining offset: 12.9 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -3.4 y -30.7 z +6.0; cookies_1 x +1.1 y +0.1 z -15.7; ramekin_1 x -27.0 y +18.8 z -16.7; plate_1 x +1.3 y +16.7 z -16.4.\nEvents: t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 71.2 cm, net 28.5 cm (looping).\nLast 3: t=75 z+l, closed -> 6.7 cm closer | t=80 hold, closed -> 17.3 cm farther | t=85 y+l z-s, closed -> 4.3 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 1.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "carry",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "carry",
+   "substage": "carry",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "carry: bowl_1 above plate_1",
+   "waypoint_cm": [
+    1.5,
+    12.9,
+    1.6
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 12.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 30.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 20.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 24.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 15.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 29.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 17.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 27.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 12.9,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.333333,
+    1.0,
+    0.333333,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 19,
+   "step": 19,
+   "control_step": 105,
+   "t": 5.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: carry (carry). Done: reach, grasp, lift. Decision 20 of 44; 24 left.\nGripper: closed 0.4 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 19.1 cm -> fits\n  B: +y, turn +180, room 36.7 cm -> fits\n  C: -x, turn -90, room 27.1 cm -> fits\n  D: +x, turn +90, room 30.6 cm -> fits\n  E: -y, turn -45, room 21.2 cm -> fits\n  F: +y, turn +135, room 35.5 cm -> fits\n  G: +x, turn +45, room 23.7 cm -> fits\n  H: -x, turn -135, room 33.8 cm -> fits\nWaypoint (carry: bowl_1 above plate_1): x -0.2, y +6.7, z +1.0   [tolerance 0.3; arrived within 1.3]\n  x: -0.2 is inside tolerance -> aligned\n  y: +6.7 is outside tolerance -> not aligned\n  z: +1.0 is outside tolerance -> not aligned\nLargest remaining offset: 6.7 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.3 y -37.1 z +4.9; cookies_1 x +0.2 y -6.4 z -16.8; ramekin_1 x -27.9 y +12.4 z -17.8; plate_1 x +0.5 y +10.3 z -17.5.\nEvents: t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 77.8 cm, net 30.3 cm (looping).\nLast 3: t=80 hold, closed -> 17.3 cm farther | t=85 y+l z-s, closed -> 4.3 cm closer | t=90 x+m y+l z+m, closed -> 6.2 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 1e-06
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 1e-06
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 1.0
+      },
+      {
+       "id": "false",
+       "p": 0.0
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 1.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "carry",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "carry",
+   "substage": "carry",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "carry: bowl_1 above plate_1",
+   "waypoint_cm": [
+    -0.2,
+    6.7,
+    1.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 19.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 36.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 27.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 30.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 21.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 35.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 23.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 33.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 19.1,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    1.0,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 20,
+   "step": 20,
+   "control_step": 110,
+   "t": 5.5,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: carry (carry). Done: reach, grasp, lift. Decision 21 of 44; 23 left.\nGripper: closed 0.4 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 25.3 cm -> fits\n  B: +y, turn +180, room 43.1 cm -> fits\n  C: -x, turn -90, room 33.5 cm -> fits\n  D: +x, turn +90, room 36.4 cm -> fits\n  E: -y, turn -45, room 27.6 cm -> fits\n  F: +y, turn +135, room 41.7 cm -> fits\n  G: +x, turn +45, room 29.6 cm -> fits\n  H: -x, turn -135, room 40.2 cm -> fits\nWaypoint (carry: bowl_1 above plate_1): x +0.0, y +0.2, z +0.4   [tolerance 0.3; arrived within 1.3]\n  x: +0.0 is inside tolerance -> aligned\n  y: +0.2 is inside tolerance -> aligned\n  z: +0.4 is outside tolerance -> not aligned\nLargest remaining offset: 0.4 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.1 y -43.6 z +4.3; cookies_1 x +0.4 y -12.8 z -17.4; ramekin_1 x -27.7 y +5.9 z -18.4; plate_1 x +0.6 y +3.8 z -18.0.\nEvents: t=55 grasp | t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 84.3 cm, net 32.7 cm (looping).\nLast 3: t=85 y+l z-s, closed -> 4.3 cm closer | t=90 x+m y+l z+m, closed -> 6.2 cm closer | t=95 y+l z+s, closed -> 6.3 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999999
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 1.0
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 0.999997
+      },
+      {
+       "id": "B",
+       "p": 2e-06
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 2e-06
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.999999
+      },
+      {
+       "id": "false",
+       "p": 1e-06
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 1.0
+      },
+      {
+       "id": "place",
+       "p": 0.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "carry",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "carry",
+   "substage": "carry",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "carry: bowl_1 above plate_1",
+   "waypoint_cm": [
+    0.0,
+    0.2,
+    0.4
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 25.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 43.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 33.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 36.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 27.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 41.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 29.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 40.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 25.3,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    0.0,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 21,
+   "step": 21,
+   "control_step": 115,
+   "t": 5.75,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: place (lower). Done: reach, grasp, lift, carry. Decision 22 of 44; 22 left.\nGripper: closed 0.4 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 26.8 cm -> fits\n  B: +y, turn +180, room 44.6 cm -> fits\n  C: -x, turn -90, room 35.0 cm -> fits\n  D: +x, turn +90, room 37.9 cm -> fits\n  E: -y, turn -45, room 29.1 cm -> fits\n  F: +y, turn +135, room 43.1 cm -> fits\n  G: +x, turn +45, room 31.0 cm -> fits\n  H: -x, turn -135, room 41.7 cm -> fits\nWaypoint (lower: bowl_1 onto plate_1): x -0.1, y -1.3, z -11.0   [tolerance 0.3; arrived within 1.3]\n  x: -0.1 is inside tolerance -> aligned\n  y: -1.3 is outside tolerance -> not aligned\n  z: -11.0 is outside tolerance -> not aligned\nLargest remaining offset: 11.0 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.3 y -45.2 z +3.4; cookies_1 x +0.2 y -14.4 z -18.3; ramekin_1 x -27.9 y +4.3 z -19.3; plate_1 x +0.4 y +2.2 z -19.0.\nEvents: t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry | t=105 place\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 86.1 cm, net 33.4 cm (looping).\nLast 3: t=90 x+m y+l z+m, closed -> 6.2 cm closer | t=95 y+l z+s, closed -> 6.3 cm closer | t=100 z+s, closed -> 10.6 cm farther",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 1.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "medium",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.989347
+      },
+      {
+       "id": "false",
+       "p": 0.010653
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 1.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "place",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "place",
+   "substage": "lower",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lower: bowl_1 onto plate_1",
+   "waypoint_cm": [
+    -0.1,
+    -1.3,
+    -11.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 26.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 44.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 35.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 37.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 29.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 43.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 31.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 41.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 26.8,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    0.0,
+    -0.333333,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 22,
+   "step": 22,
+   "control_step": 120,
+   "t": 6.0,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: place (lower). Done: reach, grasp, lift, carry. Decision 23 of 44; 21 left.\nGripper: closed 0.4 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 25.4 cm -> fits\n  B: +y, turn +180, room 43.2 cm -> fits\n  C: -x, turn -90, room 33.6 cm -> fits\n  D: +x, turn +90, room 36.7 cm -> fits\n  E: -y, turn -45, room 27.6 cm -> fits\n  F: +y, turn +135, room 41.9 cm -> fits\n  G: +x, turn +45, room 29.8 cm -> fits\n  H: -x, turn -135, room 40.3 cm -> fits\nWaypoint (lower: bowl_1 onto plate_1): x -0.6, y +0.2, z -6.0   [tolerance 0.3; arrived within 1.3]\n  x: -0.6 is outside tolerance -> not aligned\n  y: +0.2 is inside tolerance -> aligned\n  z: -6.0 is outside tolerance -> not aligned\nLargest remaining offset: 6.0 cm (large range: 3.50 and above).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.9 y -43.7 z +8.5; cookies_1 x -0.4 y -13.0 z -13.2; ramekin_1 x -28.5 y +5.8 z -14.2; plate_1 x -0.1 y +3.7 z -13.9.\nEvents: t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry | t=105 place\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 91.4 cm, net 34.7 cm (looping).\nLast 3: t=95 y+l z+s, closed -> 6.3 cm closer | t=100 z+s, closed -> 10.6 cm farther | t=105 y-m z-l, closed -> 5.1 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 2e-06
+      },
+      {
+       "id": "hold",
+       "p": 0.999998
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 1.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 0.0
+      }
+     ],
+     "choice": "large",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.977023
+      },
+      {
+       "id": "false",
+       "p": 0.022977
+      }
+     ],
+     "choice": "true",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 1.0
+      },
+      {
+       "id": "retreat",
+       "p": 0.0
+      }
+     ],
+     "choice": "place",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": true,
+    "closed": true,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "place",
+   "substage": "lower",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lower: bowl_1 onto plate_1",
+   "waypoint_cm": [
+    -0.6,
+    0.2,
+    -6.0
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 25.4,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 43.2,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 33.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 36.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 27.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 41.9,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 29.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 40.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 25.4,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.1,
+    0.0,
+    -1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  },
+  {
+   "index": 23,
+   "step": 23,
+   "control_step": 125,
+   "t": 6.25,
+   "state": "Robot: Franka Panda, gripper-relative frame; x right, y forward, z up; distances in cm.\nTask: pick up the black bowl on the cookie box and place it on the plate\nTarget: bowl_1 (chosen at t=0). Destination: plate_1.\nSubgoal so far: place (lower). Done: reach, grasp, lift, carry. Decision 24 of 44; 20 left.\nGripper: closed 0.4 cm; holding bowl_1.\nWrist yaw error: +0.0 deg [tolerance 8.0]\nTarget rests on a flat surface; it is carried 14 cm above the destination.\nGrasp candidates (outer finger needs 1.0 cm):\n  A: -y, turn +0, room 25.5 cm -> fits\n  B: +y, turn +180, room 43.1 cm -> fits\n  C: -x, turn -90, room 33.3 cm -> fits\n  D: +x, turn +90, room 36.6 cm -> fits\n  E: -y, turn -45, room 27.5 cm -> fits\n  F: +y, turn +135, room 41.7 cm -> fits\n  G: +x, turn +45, room 29.8 cm -> fits\n  H: -x, turn -135, room 40.0 cm -> fits\nWaypoint (lower: bowl_1 onto plate_1): x -0.5, y +0.5, z +0.3   [tolerance 0.3; arrived within 1.3]\n  x: -0.5 is outside tolerance -> not aligned\n  y: +0.5 is outside tolerance -> not aligned\n  z: +0.3 is inside tolerance -> aligned\nLargest remaining offset: 0.5 cm (small range: below 1.17).\nStep bands: small below 1.17 cm, medium 1.17 to 3.50 cm, large 3.50 and above; one step executes 0.5 / 1.7 / 5.0 cm.\nOther objects: bowl_2 x -4.7 y -43.3 z +14.8; cookies_1 x -0.2 y -12.5 z -7.0; ramekin_1 x -28.3 y +6.2 z -8.0; plate_1 x +0.1 y +4.1 z -7.6.\nEvents: t=70 fingers closed on bowl_1 | t=70 lift | t=85 carry | t=105 place\nAttempts: grasps 0, held 1. Closest so far 0.0 cm at t=55. Moved 97.8 cm, net 37.2 cm (looping).\nLast 3: t=100 z+s, closed -> 10.6 cm farther | t=105 y-m z-l, closed -> 5.1 cm closer | t=110 x-s z-l, closed -> 5.2 cm closer",
+   "questions": {
+    "move_x": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 1.0
+      },
+      {
+       "id": "hold",
+       "p": 0.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "-",
+     "overridden": false
+    },
+    "move_y": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 2e-06
+      },
+      {
+       "id": "hold",
+       "p": 1e-06
+      },
+      {
+       "id": "+",
+       "p": 0.999997
+      }
+     ],
+     "choice": "+",
+     "overridden": false
+    },
+    "move_z": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "size_x": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_y": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "size_z": {
+     "candidates": [
+      {
+       "id": "large",
+       "p": 0.0
+      },
+      {
+       "id": "medium",
+       "p": 0.0
+      },
+      {
+       "id": "small",
+       "p": 1.0
+      }
+     ],
+     "choice": "small",
+     "overridden": false
+    },
+    "yaw": {
+     "candidates": [
+      {
+       "id": "-",
+       "p": 0.0
+      },
+      {
+       "id": "hold",
+       "p": 1.0
+      },
+      {
+       "id": "+",
+       "p": 0.0
+      }
+     ],
+     "choice": "hold",
+     "overridden": false
+    },
+    "rim": {
+     "candidates": [
+      {
+       "id": "A",
+       "p": 1.0
+      },
+      {
+       "id": "B",
+       "p": 0.0
+      },
+      {
+       "id": "C",
+       "p": 0.0
+      },
+      {
+       "id": "D",
+       "p": 0.0
+      },
+      {
+       "id": "E",
+       "p": 0.0
+      },
+      {
+       "id": "F",
+       "p": 0.0
+      },
+      {
+       "id": "G",
+       "p": 0.0
+      },
+      {
+       "id": "H",
+       "p": 0.0
+      }
+     ],
+     "choice": "A",
+     "overridden": false
+    },
+    "grip": {
+     "candidates": [
+      {
+       "id": "true",
+       "p": 0.00407
+      },
+      {
+       "id": "false",
+       "p": 0.99593
+      }
+     ],
+     "choice": "false",
+     "overridden": false
+    },
+    "subgoal": {
+     "candidates": [
+      {
+       "id": "reach",
+       "p": 0.0
+      },
+      {
+       "id": "grasp",
+       "p": 0.0
+      },
+      {
+       "id": "lift",
+       "p": 0.0
+      },
+      {
+       "id": "carry",
+       "p": 0.0
+      },
+      {
+       "id": "place",
+       "p": 0.999999
+      },
+      {
+       "id": "retreat",
+       "p": 1e-06
+      }
+     ],
+     "choice": "place",
+     "overridden": false
+    }
+   },
+   "grip_latch": {
+    "asked": false,
+    "closed": false,
+    "refused": false
+   },
+   "grounding": null,
+   "subgoal": "place",
+   "substage": "lower",
+   "target": "akita_black_bowl_1",
+   "destination": "plate_1",
+   "waypoint": "lower: bowl_1 onto plate_1",
+   "waypoint_cm": [
+    -0.5,
+    0.5,
+    0.3
+   ],
+   "rim_candidates": [
+    {
+     "letter": "A",
+     "side": "-y",
+     "turn_deg": 0,
+     "room_cm": 25.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "B",
+     "side": "+y",
+     "turn_deg": 180,
+     "room_cm": 43.1,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "C",
+     "side": "-x",
+     "turn_deg": -90,
+     "room_cm": 33.3,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "D",
+     "side": "+x",
+     "turn_deg": 90,
+     "room_cm": 36.6,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "E",
+     "side": "-y",
+     "turn_deg": -45,
+     "room_cm": 27.5,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "F",
+     "side": "+y",
+     "turn_deg": 135,
+     "room_cm": 41.7,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "G",
+     "side": "+x",
+     "turn_deg": 45,
+     "room_cm": 29.8,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    },
+    {
+     "letter": "H",
+     "side": "-x",
+     "turn_deg": -135,
+     "room_cm": 40.0,
+     "verdict": "fits",
+     "fits": true,
+     "tried": false
+    }
+   ],
+   "rim_chosen": {
+    "letter": "A",
+    "side": "-y",
+    "turn_deg": 0,
+    "room_cm": 25.5,
+    "verdict": "fits",
+    "fits": true,
+    "tried": false
+   },
+   "action": [
+    -0.1,
+    0.1,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "forward_passes": 1,
+   "candidate_paths": 36,
+   "step_sizes_cm": {
+    "large": 5.0,
+    "medium": 1.666667,
+    "small": 0.5
+   }
+  }
+ ],
+ "poster": "poster.jpg",
+ "qpos": {
+  "path": "qpos.bin",
+  "frames": 128,
+  "nq": 48,
+  "dtype": "<f4"
+ },
+ "scene": {
+  "hash": "2cb278e9965a91cd60b84df352782ad6e5e3525d85da95d7a254be2f352b1cb2",
+  "nq": 48
+ }
+}
