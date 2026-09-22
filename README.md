@@ -24,11 +24,22 @@ Live demo (replays, no backend): <https://shijianjian.github.io/RoboJEV/>
 pip install -e .                       # numpy only; add [libero] for the simulator, [model] for torch
 robojev run --task 0 --init 0 --policy expert       # one closed-loop episode, prints success
 robojev record --task 0 --init 0 --policy expert --out web/public/replays/demo
-cd web && npm ci && npm run dev        # the replay front end
+cd web && npm ci && npm run build      # the front end
+robojev console                        # http://127.0.0.1:8765/ — replays, and one live episode
 ```
 
-`run` and `record` need `robojev[libero]` and `MUJOCO_GL=egl`. The web app needs neither the
-simulator nor any weights — it reads the episode bundles in `web/public/replays/`.
+`run`, `record` and `console` need `robojev[libero]` and `MUJOCO_GL=egl`. The web app needs
+neither the simulator nor any weights — it reads the episode bundles in `web/public/replays/`.
+
+## Live console
+
+`robojev console` serves the built front end and adds the half a static page cannot have: pick a
+task, a start state and a policy, press **Step** for one decision or **Run** for the rest, and
+watch the two camera streams, the paragraph the model read and the ten answers as they are made.
+Clicking a candidate bar **holds** that answer for the next decision — the console executes it and
+records it as overridden. **Save** writes the episode into `web/public/replays/` as an ordinary
+bundle, so it is in the strip on the next refresh. One episode at a time; the protocol is
+[web/PROTOCOL.md](web/PROTOCOL.md) and the server adds no dependency beyond the standard library.
 
 ## Repository
 
@@ -37,8 +48,9 @@ simulator nor any weights — it reads the episode bundles in `web/public/replay
 | `robojev/` | the package: plan executor, scripted expert, state text, questions, composer, parser, grounding |
 | `robojev/envs/` | the environment protocol and the LIBERO adapter (the only simulator import) |
 | `robojev/policy.py` | the in-process policy: scripted expert, local checkpoint, or the hosted Jev |
-| `robojev/cli.py` | `run`, `record`, `harvest`, `dagger`, `train` |
-| `web/`, `tools/` | the replay front end and the scripts that serve and check it |
+| `robojev/cli.py` | `run`, `record`, `console`, `harvest`, `dagger`, `train` |
+| `robojev/console/` | the local server: the protocol, RFC 6455, the PNG encoder, one live episode |
+| `web/`, `tools/` | the front end and the scripts that serve and check it |
 | `docs/DESIGN.md` | why it is shaped this way, and every measurement |
 
 ## How it works
@@ -69,3 +81,10 @@ Details and the failures that shaped each of those steps: [docs/DESIGN.md](docs/
   Python 3.10 and NanoJev's predictor pins 3.14 with torch 2.14. The scripted expert runs closed
   loop today; the learned one loads a real checkpoint and answers all ten questions in one pass,
   but the closed-loop counts above were measured with the two halves in separate processes.
+- The console inherits that split: `robojev console --policy expert` is what has been run, and
+  `--policy model` needs an environment where both extras install (a 3.12 venv with
+  `robojev[libero,model]`), which is untested. The console refuses a policy this interpreter
+  cannot serve rather than failing mid-episode.
+- The console's live view is the two camera renders and not a 3D scene: a pose stream and a
+  WebGL viewer would be a second renderer to keep honest, and what the policy reads is the text
+  beside the pictures rather than either of them.
