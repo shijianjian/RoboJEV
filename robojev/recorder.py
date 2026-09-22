@@ -152,6 +152,17 @@ def _decision(frame, index: int, fps: float) -> dict:
     })
 
 
+def decision_entry(frame, index: int, fps: float) -> dict:
+    """One decision, exactly as `episode.json` holds it.
+
+    Public because a **live** console sends this same object down its socket, decision by decision
+    (`robojev.console`, `web/PROTOCOL.md`): the page has one reader for a recorded decision and a
+    streamed one, and it only does if the two are the same bytes. Calling this rather than
+    re-deriving it is what makes that true by construction instead of by agreement.
+    """
+    return _decision(frame, index, fps)
+
+
 # --------------------------------------------------------------------------------------- video
 
 def ffmpeg() -> str:
@@ -313,5 +324,5 @@ def record(env, policy, episode, out: pathlib.Path, *, suite: str, task_index: i
     return bundle
 
 
-__all__ = ["POSTER_NAME", "RIM_LINE", "SCHEMA_VERSION", "ffmpeg", "poster_time", "record",
-           "reparse", "rim_rows", "write_poster", "write_video"]
+__all__ = ["POSTER_NAME", "RIM_LINE", "SCHEMA_VERSION", "decision_entry", "ffmpeg", "poster_time",
+           "record", "reparse", "rim_rows", "write_poster", "write_video"]

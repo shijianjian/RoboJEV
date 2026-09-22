@@ -1,16 +1,18 @@
 """`robojev` -- run one episode, record one for the web replay, and make a checkpoint.
 
-Five verbs, in the order somebody meets them:
+Six verbs, in the order somebody meets them:
 
     robojev run      one closed-loop episode; prints whether it succeeded
     robojev record   the same, written out as a replay bundle the web front end serves
+    robojev console  a local server: the web app, plus one episode driven from the browser
     robojev harvest  the scripted expert's rollouts, as training rows
     robojev train    NanoJev's own trainer over those rows
     robojev dagger   one round of relabelling the trained policy's own visited states
 
-`run` and `record` need a simulator (`pip install 'robojev[libero]'`); `train` needs none on this
-box, because the fine-tune happens in its own pinned environment. Nothing heavy is imported until
-the verb that needs it runs, so `robojev --help` costs the standard library and numpy.
+`run`, `record` and `console` need a simulator (`pip install 'robojev[libero]'`); `train` needs
+none on this box, because the fine-tune happens in its own pinned environment. Nothing heavy is
+imported until the verb that needs it runs, so `robojev --help` costs the standard library and
+numpy.
 
 Progress goes to stderr and the answer goes to stdout, so `$(robojev harvest …)` is a path and
 `robojev train --json | jq` works.
@@ -124,6 +126,47 @@ def record(args: argparse.Namespace) -> int:
     print(f"success={bundle['success']} decisions={len(bundle['decisions'])} "
           f"steps={bundle['steps']} bytes={size} out={out}")
     return 0
+
+
+# ------------------------------------------------------------------------------------ console
+
+def console(args: argparse.Namespace) -> int:
+    """The local console: the built web app on one port, and one episode driven from it.
+
+    The heavy import is the simulator and it happens when an episode is started, not here -- so a
+    console comes up in milliseconds and says what it is serving before anything is loaded. What
+    *is* checked here is the thing that would otherwise fail in the middle of a browser session:
+    a `--policy` this interpreter cannot serve.
+    """
+    from robojev.console import server as console_mod
+    from robojev.console import wire
+
+    policies = console_mod.available_policies()
+    if args.policy not in policies:
+        why = {
+            "model": "a local checkpoint needs torch: pip install 'robojev[model]'. LIBERO pins "
+                     "Python 3.10 and NanoJev's predictor pins 3.14, so the two share an "
+                     "interpreter only in an environment where both install (README, Limits).",
+            "jev": "the hosted model needs $JEV_API_KEY, and every decision it answers is a paid "
+                   "request.",
+        }.get(args.policy, "this interpreter cannot serve it")
+        print(f"console: --policy {args.policy} is not available here: {why}", file=sys.stderr)
+        print(f"console: this interpreter serves {', '.join(policies)}", file=sys.stderr)
+        return 2
+
+    dist = pathlib.Path(args.dist) if args.dist else console_mod.default_dist()
+    if dist is not None and not (dist / "index.html").is_file():
+        print(f"console: {dist} has no index.html; build the app with "
+              f"`cd web && npm ci && npm run build`", file=sys.stderr)
+        return 2
+    replays = pathlib.Path(args.replays_dir) if args.replays_dir else console_mod.default_replays()
+    default = wire.StartSpec(suite=args.suite, task=args.task, init=args.init,
+                             policy=args.policy, selection=args.selection,
+                             checkpoint=args.checkpoint, seed=args.seed,
+                             max_steps=args.max_steps)
+    return console_mod.serve(console_mod.Console(
+        host=args.host, port=args.port, dist=dist, replays=replays, policies=policies,
+        default=default, render_size=args.render_size, idle_timeout=args.idle_timeout, log=log))
 
 
 # ------------------------------------------------------------------------------------ harvest
@@ -369,6 +412,22 @@ def build_parser() -> argparse.ArgumentParser:
                      help="run nothing: re-derive the fields parsed out of the state text in an "
                           "existing bundle at --out and rewrite its episode.json")
     rec.set_defaults(func=record)
+
+    c = sub.add_parser("console", help="a local server: the web app, plus one live episode")
+    _episode_flags(c)
+    c.add_argument("--host", default="127.0.0.1",
+                   help="the interface to bind. Loopback by default and on purpose: the console "
+                        "is unauthenticated and drives a simulator")
+    c.add_argument("--port", type=int, default=8765)
+    c.add_argument("--dist", default=None,
+                   help="the built front end to serve; defaults to web/dist in this checkout")
+    c.add_argument("--replays-dir", default=None,
+                   help="where `save` writes a bundle and where the episode strip reads them; "
+                        "defaults to web/public/replays in this checkout")
+    c.add_argument("--idle-timeout", type=float, default=900.0,
+                   help="seconds without a command before the episode is closed and the simulator "
+                        "let go of")
+    c.set_defaults(func=console)
 
     h = sub.add_parser("harvest", help="training rows from the scripted expert's rollouts")
     h.add_argument("--suite", default="libero_spatial")
