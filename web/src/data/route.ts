@@ -28,10 +28,15 @@ export function hashFor(id: string): string {
  * of the site is that something is playing. An empty `known` means the index has not arrived yet,
  * and then a named id is taken at its word — otherwise the first paint would always be the
  * default and would then jump.
+ *
+ * `fallback` is what an address that names nothing opens. It is the drawer on the static site and
+ * the console on a page a console is serving, which is the one difference between the two
+ * deployments' routing: `robojev console` should open on the thing it is a console for.
  */
-export function episodeFor(hash: string, known: readonly string[]): string {
+export function episodeFor(hash: string, known: readonly string[],
+                           fallback: string = DEFAULT_EPISODE): string {
   const named = routeOf(hash);
-  if (named === null) return DEFAULT_EPISODE;
+  if (named === null) return fallback;
   if (known.length === 0 || known.includes(named)) return named;
-  return DEFAULT_EPISODE;
+  return fallback;
 }

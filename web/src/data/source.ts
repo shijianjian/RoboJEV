@@ -7,14 +7,17 @@
  * and the state text must not be able to tell the difference, so they are written against
  * `EpisodeSource` and never against `fetch`.
  *
- * The live half is a **stub on purpose**: its message types are written down in `PROTOCOL.md` and
- * `connect()` refuses with the reason, rather than a half-built client nobody has run against a
- * server nobody has written. What decides which one is used is `liveUrl()` -- `VITE_LIVE_URL` at
- * build time, or `?live=ws://…` at run time, so a static build dropped on Pages stays a replay
- * and the same files pointed at a console become a console.
+ * The live half is {@link LiveSource} in `./live.ts`, and what decides whether it is used is
+ * {@link liveUrl}: the console injects its own address into the page it serves, `?live=ws://…`
+ * overrides that, and `VITE_LIVE_URL` is the build-time default. A static build dropped on Pages
+ * has none of the three, makes no probe, and is a replay viewer -- which is the point: the
+ * deployed site must not make one request it did not mean to.
  */
+import { LiveSource } from "./live";
 import { validateEpisode } from "./schema";
 import type { Decision, Episode, EpisodeIndexEntry } from "./types";
+
+export { LiveSource } from "./live";
 
 export interface EpisodeSource {
   readonly kind: "replay" | "live";
@@ -79,54 +82,39 @@ export class ReplaySource implements EpisodeSource {
   }
 }
 
+/** What `robojev console` writes into the page it serves, before the bundle runs. */
+export interface ConsoleHint { ws?: unknown }
+
 /**
- * The live console, not built.
+ * The live console's address, or null for the ordinary static site.
  *
- * Everything it needs from a server is in `PROTOCOL.md`: a WebSocket that sends one `hello` with
- * the episode's header, then one `decision` message per decision carrying exactly the object
- * `recorder.py` writes into `episode.json`, then `done`. Frames come from an MJPEG or WebRTC
- * stream named in `hello`, because a browser cannot decode a 20 Hz mp4 that is still being
- * written. Until that server exists this class states the contract and refuses.
+ * Three sources, in the order that lets one build be all three deployments: `?live=` on the URL
+ * wins, so a page served from anywhere can be pointed at a console without rebuilding; then the
+ * global the console injects into the page it serves itself, which is why `robojev console` alone
+ * opens a working console; then `VITE_LIVE_URL`, the build-time default. A GitHub Pages visit has
+ * none of them and makes no request looking for one.
  */
-export class LiveSource implements EpisodeSource {
-  readonly kind = "live" as const;
-  readonly url: string;
-
-  constructor(url: string) {
-    this.url = url;
-  }
-
-  private refuse(): never {
-    throw new Error(
-      `live source ${this.url}: the console server is not built yet. The page speaks the protocol ` +
-      `in PROTOCOL.md; nothing serves it. Drop the ?live= parameter to read the recorded bundles.`,
-    );
-  }
-
-  list(): Promise<EpisodeIndexEntry[]> {
-    return Promise.reject(new Error(`live source ${this.url}: not implemented (see PROTOCOL.md)`));
-  }
-
-  load(): Promise<Episode> {
-    return Promise.reject(new Error(`live source ${this.url}: not implemented (see PROTOCOL.md)`));
-  }
-
-  subscribe(): () => void {
-    this.refuse();
-  }
-}
-
-/** The live console's address, or null for the ordinary static site. `?live=` wins over the
- *  build-time default so one deployed build can be pointed at a console without rebuilding. */
-export function liveUrl(search: string = typeof location === "undefined" ? "" : location.search): string | null {
+export function liveUrl(
+  search: string = typeof location === "undefined" ? "" : location.search,
+  hint: ConsoleHint | null = typeof window === "undefined"
+    ? null
+    : ((window as unknown as { __ROBOJEV_CONSOLE__?: ConsoleHint }).__ROBOJEV_CONSOLE__ ?? null),
+): string | null {
   const fromQuery = new URLSearchParams(search).get("live");
   if (fromQuery !== null && fromQuery !== "") return fromQuery;
+  if (hint !== null && typeof hint.ws === "string" && hint.ws !== "") return hint.ws;
   const fromEnv = import.meta.env?.VITE_LIVE_URL;
   return typeof fromEnv === "string" && fromEnv !== "" ? fromEnv : null;
 }
 
-/** The source this page run uses. */
+/** The recorded bundles, always: the strip is the four episodes on disk whether or not a console
+ *  is attached, and a console adds an item in front of them rather than replacing them. */
 export function makeSource(): EpisodeSource {
-  const live = liveUrl();
-  return live === null ? new ReplaySource() : new LiveSource(live);
+  return new ReplaySource();
+}
+
+/** The console this page run talks to, or null. */
+export function makeLive(): LiveSource | null {
+  const url = liveUrl();
+  return url === null ? null : new LiveSource(url);
 }

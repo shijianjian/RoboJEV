@@ -9,11 +9,17 @@
  * Each item is an `<a href="#/<id>">`, so a middle click opens a tab and the browser's own
  * history works; the click handler only stops the default navigation so switching does not
  * reload.
+ *
+ * The console, when there is one, is the first item and the only one that is not a recording: it
+ * has no poster (nothing has been rendered) and no outcome (nothing has happened), so it says
+ * "live" where the others say success or failure. On the static deployment there is no such item
+ * and this strip is exactly the four it always was.
  */
 import type { EpisodeIndexEntry } from "../data/types";
+import { LIVE_ID } from "../data/live";
 import { shortLabel } from "../data/lookup";
 import { hashFor } from "../data/route";
-import { OutcomeChip } from "./ui";
+import { Chip, OutcomeChip } from "./ui";
 
 export function EpisodeStrip({ entries, current, posterUrl, onPick }: {
   entries: EpisodeIndexEntry[];
@@ -46,8 +52,14 @@ export function EpisodeStrip({ entries, current, posterUrl, onPick }: {
             <span className="strip__body">
               <span className="strip__label">{shortLabel(entry.instruction)}</span>
               <span className="strip__meta">
-                <OutcomeChip success={entry.success} testId={`strip-outcome-${entry.id}`} />
-                <span className="num dim">{entry.decisions}/{entry.max_decisions}</span>
+                {entry.id === LIVE_ID ? (
+                  <Chip tone="accent" testId="strip-outcome-live">live</Chip>
+                ) : (
+                  <OutcomeChip success={entry.success} testId={`strip-outcome-${entry.id}`} />
+                )}
+                {entry.max_decisions > 0 && (
+                  <span className="num dim">{entry.decisions}/{entry.max_decisions}</span>
+                )}
               </span>
             </span>
           </a>

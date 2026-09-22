@@ -63,9 +63,14 @@ export function Details({ episode, decision, grounding }: {
         >
           {g.target} <span className="dim">→</span> {g.destination}
           <span className="dim"> {g.source}</span>
-          <span className={g.model_agrees ? "fact__ok" : "fact__bad"}>
-            {g.model_agrees ? " model agrees" : ` model: ${g.model?.target ?? "?"}`}
-          </span>
+          {/* Only when there *is* a model opinion to compare against. The scripted expert runs no
+              grounding forward, so `model_agrees` is null on its episodes — and drawing that as a
+              disagreement would be the page inventing a second answer nobody ever gave. */}
+          {g.model_agrees !== null && (
+            <span className={g.model_agrees ? "fact__ok" : "fact__bad"}>
+              {g.model_agrees ? " model agrees" : ` model: ${g.model?.target ?? "?"}`}
+            </span>
+          )}
         </Fact>
       )}
       <Fact label="policy" title={`checkpoint revision ${episode.checkpoint_revision}`} testId="fact-policy">

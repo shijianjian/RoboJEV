@@ -291,6 +291,51 @@ kbd {
 .bar--refused { box-shadow: inset 3px 0 0 var(--bad); }
 .bar--refused .bar__id { color: var(--bad); text-decoration: line-through; }
 
+/* Live, a bar is a button: clicking one holds that answer for the next decision. The held one is
+   outlined rather than filled, because the fill is the probability and must stay readable. */
+.bar--live { cursor: pointer; font: inherit; font-size: var(--fs-xs); }
+.bar--live:hover { border-color: var(--line-bright); color: var(--text-1); }
+.bar--live:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Outlined, not labelled: the row's own `next: <id>` chip says which answer is held, and a word
+   inside the bar would sit next to a candidate called `hold` and read as one. */
+.bar--armed { border-color: var(--accent); color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent); }
+.bar--armed .bar__id { font-weight: 600; }
+
+/* --------------------------------------------------------------------------- live console */
+/* One compact bar in the same language as the transport: the scene and the policy before an
+   episode, the five commands during one. */
+.livebar { margin-bottom: var(--s-3); }
+.livebar__row { display: flex; align-items: flex-end; gap: var(--s-2); flex-wrap: wrap; }
+.livebar__right { margin-left: auto; display: flex; gap: var(--s-2); align-items: center; }
+.livebar__scene { font-size: var(--fs-xs); color: var(--text-3); align-self: center; }
+.livebar__error { margin-top: var(--s-2); padding: var(--s-2) var(--s-3); font-size: var(--fs-xs); }
+
+.field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.field--wide { flex: 1 1 260px; min-width: 140px; }
+.field__label { font-size: var(--fs-xs); color: var(--text-3); }
+.input {
+  min-height: 30px; padding: 4px 8px; max-width: 100%;
+  border: 1px solid var(--line-bright); border-radius: var(--r-2);
+  background: var(--bg-2); color: var(--text-1);
+  font: inherit; font-size: var(--fs-sm);
+}
+.input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+select.input { min-width: 90px; }
+.field:not(.field--wide) input.input { width: 84px; }
+
+.footnote { margin: var(--s-2) 0 0; font-size: var(--fs-xs); color: var(--text-2); }
+
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn:disabled:hover { background: var(--bg-2); border-color: var(--line-bright); }
+
+/* The live cameras, in the boxes the replay's videos use — one picture at a time rather than an
+   mp4, because the episode is still happening. */
+.liveframe {
+  display: block; width: 100%; height: auto; aspect-ratio: 1 / 1;
+  background: var(--bg-canvas); object-fit: cover;
+}
+.liveframe--idle { width: 100%; }
+
 /* --------------------------------------------------------------------------- state text */
 .statetext {
   margin: 0; padding: var(--s-3);

@@ -8,16 +8,26 @@
  *
  * Switching does not reload: the hash changes, the episode is fetched (and thereafter cached by
  * `ReplaySource`), and the `<video>` is rebuilt by its key.
+ *
+ * **The console is one more item in the strip**, and only when there is one (`makeLive`, which is
+ * null unless `?live=`, the global `robojev console` injects, or `VITE_LIVE_URL` says otherwise).
+ * A GitHub Pages visit therefore builds no socket, makes no probe and shows no live controls: the
+ * static deployment is exactly the page it was before the console existed. A page a console *is*
+ * serving opens on `#/live`, because that is the thing it is a console for, and the four recorded
+ * bundles are still one click away in the same strip.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EpisodeStrip } from "./components/EpisodeStrip";
+import { Live } from "./components/Live";
 import { Replay } from "./components/Replay";
 import { Chip } from "./components/ui";
-import { episodeFor, hashFor } from "./data/route";
-import { makeSource, ReplaySource } from "./data/source";
+import { EMPTY_LIVE, LIVE_ID, liveEntry, type LiveState } from "./data/live";
+import { DEFAULT_EPISODE, episodeFor, hashFor } from "./data/route";
+import { makeLive, makeSource, ReplaySource } from "./data/source";
 import type { Episode, EpisodeIndexEntry } from "./data/types";
 
 const source = makeSource();
+const live = makeLive();
 
 function Failed({ what, error }: { what: string; error: unknown }) {
   const message = error instanceof Error ? error.message : String(error);
@@ -35,6 +45,7 @@ export function App() {
   const [listError, setListError] = useState<unknown>(null);
   const [episode, setEpisode] = useState<Episode | null>(null);
   const [episodeError, setEpisodeError] = useState<unknown>(null);
+  const [liveState, setLiveState] = useState<LiveState>(EMPTY_LIVE);
 
   useEffect(() => {
     const onHash = () => setHash(location.hash);
@@ -51,10 +62,34 @@ export function App() {
     return () => { alive = false; };
   }, []);
 
-  const known = useMemo(() => (entries ?? []).map((e) => e.id), [entries]);
-  const id = episodeFor(hash, known);
+  // The console: one socket for the life of the page, and one request for the task sentences as
+  // soon as it says hello. Asking for them lazily is why the console comes up instantly — reading
+  // LIBERO's task definitions costs seconds, and it costs them once.
+  useEffect(() => {
+    if (live === null) return;
+    let asked = "";
+    const off = live.subscribeState((next) => {
+      setLiveState(next);
+      const suite = next.config?.default.suite ?? "";
+      if (next.connection === "open" && next.tasks === null && suite !== "" && asked !== suite) {
+        asked = suite;
+        live.askTasks(suite);
+      }
+    });
+    live.connect();
+    return () => { off(); live.close(); };
+  }, []);
+
+  const strip = useMemo(
+    () => (live === null ? (entries ?? []) : [liveEntry(liveState), ...(entries ?? [])]),
+    [entries, liveState],
+  );
+  const known = useMemo(() => strip.map((e) => e.id), [strip]);
+  const id = episodeFor(hash, known, live === null ? DEFAULT_EPISODE : LIVE_ID);
+  const showingLive = live !== null && id === LIVE_ID;
 
   useEffect(() => {
+    if (showingLive) return;
     let alive = true;
     setEpisode(null);
     setEpisodeError(null);
@@ -63,7 +98,7 @@ export function App() {
       (err) => { if (alive) setEpisodeError(err); },
     );
     return () => { alive = false; };
-  }, [id]);
+  }, [id, showingLive]);
 
   const pick = useCallback((next: string) => { location.hash = hashFor(next); }, []);
 
@@ -72,21 +107,20 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target !== null && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      const list = entries ?? [];
-      if (list.length === 0) return;
-      const at = Math.max(0, list.findIndex((entry) => entry.id === id));
+      if (strip.length === 0) return;
+      const at = Math.max(0, strip.findIndex((entry) => entry.id === id));
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
         const delta = e.key === "ArrowDown" ? 1 : -1;
-        pick(list[(at + delta + list.length) % list.length].id);
+        pick(strip[(at + delta + strip.length) % strip.length].id);
       } else if (/^[1-9]$/.test(e.key)) {
-        const wanted = list[Number(e.key) - 1];
+        const wanted = strip[Number(e.key) - 1];
         if (wanted !== undefined) { e.preventDefault(); pick(wanted.id); }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entries, id, pick]);
+  }, [strip, id, pick]);
 
   const mediaUrl = useCallback(
     (path: string) => (source instanceof ReplaySource ? source.mediaUrl(id, path) : path),
@@ -105,15 +139,21 @@ export function App() {
     <div className="shell">
       <header className="masthead">
         <span className="masthead__name"><a href="#/">RoboJEV</a></span>
-        <span className="masthead__right"><Chip mono>{source.kind}</Chip></span>
+        <span className="masthead__right">
+          <Chip mono testId="source-kind">
+            {live === null ? source.kind : `console · ${liveState.connection}`}
+          </Chip>
+        </span>
       </header>
 
       {listError !== null && <Failed what="The episode index" error={listError} />}
-      {entries !== null && entries.length > 0 && (
-        <EpisodeStrip entries={entries} current={id} posterUrl={posterUrl} onPick={pick} />
+      {strip.length > 0 && (
+        <EpisodeStrip entries={strip} current={id} posterUrl={posterUrl} onPick={pick} />
       )}
 
-      {episodeError !== null ? (
+      {showingLive && live !== null ? (
+        <Live source={live} state={liveState} />
+      ) : episodeError !== null ? (
         <Failed what={`Bundle “${id}”`} error={episodeError} />
       ) : episode === null ? (
         <p className="muted" data-testid="loading">Loading…</p>
