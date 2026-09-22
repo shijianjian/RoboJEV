@@ -21,7 +21,10 @@ import pytest
 from robojev import policy as policy_mod
 from robojev.console import ws
 from robojev.console.server import Console
-from tests.test_console_session import RenderEnv, StubEnv
+# By module name and not `tests.…`: `tests/` is not a package, and pytest puts the directory
+# itself on the path -- which is the only spelling that works whether or not the checkout root
+# happens to be importable.
+from test_console_session import RenderEnv, StubEnv
 
 
 class Client:
