@@ -17,22 +17,38 @@ export function StageTimeline({ segments, duration, current, onSeek }: {
   current: number;
   onSeek: (t: number) => void;
 }) {
+  // One time axis with the scrubber above it: every segment is placed at its own start and sized
+  // to its own span as a fraction of the whole episode, and the settling steps before the first
+  // decision - which belong to no stage - are a neutral segment at the front. So the bar starts at
+  // t = 0 and ends at the episode's end, exactly where the scrubber's track does.
+  const pct = (t: number) => (duration > 0 ? Math.min(100, Math.max(0, (t / duration) * 100)) : 0);
+  const settle = segments.length > 0 ? segments[0].from : duration;
   return (
-    <div className="timeline" data-testid="stage-timeline">
+    <div className="rj-timeline" data-testid="stage-timeline">
+      {settle > 0 && (
+        <span
+          className="rj-timeline__seg rj-timeline__seg--settle"
+          style={{ left: "0%", width: `${pct(settle)}%` }}
+          title={`settling: 0.00–${settle.toFixed(2)} s, no decision`}
+          aria-hidden
+          data-testid="timeline-settle"
+        />
+      )}
       {segments.map((seg, i) => {
-        const width = duration > 0 ? ((seg.to - seg.from) / duration) * 100 : 0;
+        const width = pct(seg.to) - pct(seg.from);
         const active = current >= seg.fromDecision && current <= seg.toDecision;
         return (
           <button
             key={i}
             type="button"
-            className="timeline__seg"
-            style={{ width: `${width}%`, background: stageColor(seg.stage) }}
+            className="rj-timeline__seg"
+            style={{ left: `${pct(seg.from)}%`, width: `${width}%`, background: stageColor(seg.stage) }}
             aria-current={active ? "true" : undefined}
             aria-label={`${seg.stage}, ${seg.from.toFixed(2)} to ${seg.to.toFixed(2)} seconds`}
             onClick={() => onSeek(seg.from + 1e-3)}
             title={`${seg.stage}: ${seg.from.toFixed(2)}–${seg.to.toFixed(2)} s, decisions ${seg.fromDecision + 1}–${seg.toDecision + 1}`}
             data-testid={`timeline-${i}`}
+            data-from={seg.fromDecision}
           >
             {width > 9 ? seg.stage : ""}
           </button>

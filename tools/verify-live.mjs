@@ -1,19 +1,23 @@
 /**
  * Prove the live console works in a real browser, against a real simulator, and photograph it.
  *
- * `tools/verify.mjs` does this for the replay half against `tools/serve.mjs`; this one does it
- * against `robojev console`, which is serving the same built app *and* running an episode. It
- * drives the page as an operator would — pick a scene, Start, Step, hold a candidate, Step again,
- * Run to the end, Save — and asserts the things a screenshot cannot: that two decisions really
- * arrived with pictures beside them, that the answer the operator forced is the answer the bundle
- * records as overridden, that the episode ended, and that the bundle is on disk.
+ * `tools/verify.mjs` does this for the static half against `tools/serve.mjs`; this one does it
+ * against `robojev console`, which serves the same built app *and* runs an episode. It drives the
+ * Dataset tab as an operator would - pick a task in the sidebar, pick weights, Start, hold one
+ * candidate while it runs, let it run to its end, open the run it was saved as from the list on
+ * the right; then Start and Stop one more - and asserts what a screenshot cannot: that decisions
+ * arrived, that the 3D scene loaded and moved with the arm, that the episode was saved by itself
+ * with its pose table and its scene, and that the forced answer is recorded as overridden.
  *
  *     node tools/verify-live.mjs [baseURL] [screenshot dir]
  *
- * Defaults: http://127.0.0.1:8765/ and ./screenshots.
+ * Defaults: http://127.0.0.1:8765/ and ./screenshots. The console must offer weights it can run:
+ * on a box whose console interpreter cannot load a checkpoint, start it with `--dev-expert` (the
+ * scripted expert, for development), which is what this picks when it is offered. It leaves two
+ * saved runs in the console's saves directory; delete them afterwards if they are not wanted.
  *
- * Playwright is resolved from wherever node finds it and drives the **system Chrome**, as
- * `verify.mjs` does and for the same reason: the replay half of the same page needs H.264.
+ * Playwright drives the **system Chrome** (H.264 for the replay half), with SwiftShader allowed so
+ * a headless box still has WebGL for the 3D stage.
  */
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
@@ -28,222 +32,164 @@ function check(name, ok, detail = "") {
   if (!ok) failures += 1;
 }
 
-const browser = await chromium.launch({ channel: "chrome" });
+const browser = await chromium.launch({ channel: "chrome", args: ["--enable-unsafe-swiftshader", "--use-gl=swiftshader"] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const consoleErrors = [];
 page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
 page.on("pageerror", (e) => consoleErrors.push(String(e)));
 
-const text = (id) => page.locator(`[data-testid="${id}"]`).innerText();
-const count = (id) => page.locator(`[data-testid="${id}"]`).count();
-
-/** How many decisions the transport says have arrived. */
-async function decisionsShown() {
-  const readout = await text("transport-readout");
-  return Number(/\/\s*(\d+)\s*$/.exec(readout.replace(/\s+/g, " ").trim())?.[1] ?? "0");
+const by = (id) => page.locator(`[data-testid="${id}"]`);
+const text = async (id) => (await by(id).first().innerText()).trim();
+async function waitStatus(want, timeout = 60000) {
+  await page.waitForFunction((w) => {
+    const el = document.querySelector('[data-testid="session-status"]');
+    return el !== null && w.includes(el.innerText.trim());
+  }, want, { timeout });
 }
-
-async function waitForDecisions(n, timeout = 120000) {
+async function waitDecisionAtLeast(n, timeout = 60000) {
   await page.waitForFunction((want) => {
-    const el = document.querySelector('[data-testid="transport-readout"]');
-    if (el === null) return false;
-    const m = /\/\s*(\d+)\s*$/.exec(el.innerText.replace(/\s+/g, " ").trim());
+    const m = /decision\s+(\d+)/.exec(document.querySelector('[data-testid="decision-meta"]')?.innerText ?? "");
     return m !== null && Number(m[1]) >= want;
   }, n, { timeout });
 }
-
-/**
- * The candidate ids of one question on screen, and which is chosen.
- *
- * Off the test id and not off the label: the panel draws `-` as a typographic minus, and a script
- * that clicked what it read would be looking for a candidate no question declares.
- */
-async function bars(qid) {
-  return page.evaluate((q) => {
-    const group = document.querySelector(`[data-testid="decision-${q}"]`);
-    if (group === null) return null;
-    return [...group.querySelectorAll(".bar")].map((b) => ({
-      id: b.getAttribute("data-testid").slice(`bar-${q}-`.length),
-      chosen: b.classList.contains("bar--chosen"),
-      armed: b.classList.contains("bar--armed"),
-      tag: b.tagName,
-    }));
-  }, qid);
+const topRun = () => page.locator('[data-testid="dataset-runs"] [data-testid^="dataset-run-"]').first().getAttribute("data-testid");
+const liveScene = '[data-testid="live-scene"]';
+async function liveSceneReady() {
+  await page.waitForFunction((sel) => document.querySelector(`${sel} [data-testid="scene-status"]`)?.innerText.trim() === "ready",
+    liveScene, { timeout: 120000 });
 }
+const canvasShot = () => page.locator(`${liveScene} canvas.scene`).screenshot();
 
-// ------------------------------------------------------------------ the console serves the app
+// ------------------------------------------------------------------------ idle
 await page.goto(BASE, { waitUntil: "domcontentloaded" });
-await page.waitForSelector('[data-testid="live-controls"]', { timeout: 30000 });
-check("the console serves the app and the page finds the console",
-      (await count("live-controls")) === 1);
-await page.waitForFunction(
-  () => document.querySelector('[data-testid="live-connection"]')?.innerText.trim() === "idle",
-  null, { timeout: 20000 });
-check("the socket is open and idle", (await text("live-connection")).trim() === "idle");
-check("the console is the first item in the strip and it is current",
-      (await page.locator('[data-testid="strip-live"]').getAttribute("aria-current")) === "true");
-check("the recorded bundles are still in the strip beside it",
-      (await page.locator('[data-testid="strip-drawer"]').count()) === 1);
-check("no episode, so no picture is being requested",
-      (await count("live-no-episode")) === 1 && (await count("live-agentview")) === 0);
+await page.waitForSelector('[data-testid="side-tab-runs"][aria-selected="true"]');
+check("the console's page opens on the Runs tab, like the site", true);
+check("a local build has both tabs, and the GitHub mark in the header",
+      (await page.locator('[role="tablist"] [role="tab"]').allInnerTexts()).join(",") === "Runs,Dataset"
+      && (await page.locator('.app-header [data-testid="github-link"]').getAttribute("href")) === "https://github.com/shijianjian/RoboJEV"
+      && (await page.locator('.app-side [data-testid="github-link"]').count()) === 0);
+const rows = await page.locator('[data-testid="run-row"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-run")));
+check("the Runs tab lists recorded runs only, with no live item", !rows.includes("live") && rows.includes("drawer"), rows.join(","));
+await by("side-tab-dataset").click();
+await waitStatus(["waiting", "done", "failed"], 15000);
+check("the Dataset tab is the console: the task list, and the controls in one bar along the bottom",
+      (await by("scene-sidebar").count()) === 1 && (await by("dock").count()) === 1 && (await by("session-start").count()) === 1);
+const noise = ["session-step", "session-run", "session-pause", "session-save", "session-temperature", "state-toggle", "play", "tick-0"];
+const present = [];
+for (const id of noise) if ((await by(id).count()) > 0) present.push(id);
+check("and nothing else: no Step, Run, Save, temperature, state text or scrubber", present.length === 0, present.join(","));
+await page.waitForFunction(() => document.querySelector('[data-testid="task-pick-0"]')
+  ?.closest("label")?.innerText.includes("pick up"), null, { timeout: 30000 });
+check("the sidebar names the tasks once the console has read them", true);
+const weights = await page.locator('[data-testid="session-weights"] option').allInnerTexts();
+check("the bottom bar offers weights, not engines", weights.length > 0 && !weights.some((w) => /^(expert|model|jev)$/.test(w.trim())),
+      weights.join(" | "));
+const expert = weights.findIndex((w) => w.includes("scripted expert"));
+if (expert >= 0) await by("session-weights").selectOption({ index: expert });
+check("no episode, so no picture is being requested", (await by("live-agentview").count()) === 0);
 
-// The task list arrives once the console has read LIBERO's task definitions: seconds, off the
-// main thread, so the page is usable before it lands.
-await page.waitForFunction(
-  () => document.querySelector('[data-testid="live-task"]')?.tagName === "SELECT",
-  null, { timeout: 90000 }).catch(() => {});
-const picker = await page.locator('[data-testid="live-task"]').evaluate((el) => el.tagName);
-check("the task picker names the tasks once the console has read them", picker === "SELECT",
-      picker);
+// ------------------------------------------------------------------------ start, and it runs
+await by("task-pick-0").check();
+await page.waitForFunction(() => document.querySelector('[data-testid="dataset-run-bowl-plate"]') !== null, null, { timeout: 5000 })
+  .then(() => check("the task's recorded runs are listed on the right", true), () => check("the task's recorded runs are listed on the right", false));
+const before = await canvasShot();
+const firstTop = await topRun();
+await by("session-start").click();
+await waitStatus(["running", "done"], 30000);
+await liveSceneReady();
+check("the live 3D scene loaded", true);
+await page.waitForFunction(() => ["live-agentview", "live-wrist"].every((id) => {
+  const img = document.querySelector(`[data-testid="${id}"]`);
+  return img !== null && img.complete && img.naturalWidth === 256;
+}), null, { timeout: 60000 });
+check("both cameras decoded a real picture", true);
+const instruction = await text("task-instruction");
+check("the page names the task being driven", instruction.startsWith("pick up"), instruction);
+await waitDecisionAtLeast(2);
+check("Start runs it: decisions arrive with nobody pressing anything", true);
 
-await page.screenshot({ path: `${SHOTS}/console-idle.png` });
-
-// --------------------------------------------------------------------------- start an episode
-if (picker === "SELECT") await page.locator('[data-testid="live-task"]').selectOption("0");
-else await page.locator('[data-testid="live-task"]').fill("0");
-await page.locator('[data-testid="live-init"]').fill("0");
-await page.locator('[data-testid="live-policy"]').selectOption("expert");
-await page.locator('[data-testid="live-start"]').click();
-
-await page.waitForFunction(
-  () => document.querySelector('[data-testid="live-connection"]')?.innerText.trim() === "paused",
-  null, { timeout: 180000 });
-const title = (await text("live-title")).trim();
-check("the episode header names the task", title.startsWith("pick up"), title);
-check("the scene line says what is being driven",
-      (await text("live-scene")).includes("task 0"), (await text("live-scene")).trim());
-check("the cameras are being fetched now that there is an episode",
-      (await count("live-agentview")) === 1 && (await count("live-wrist")) === 1);
-
-// ------------------------------------------------------------------------------ two decisions
-await page.locator('[data-testid="live-step"]').click();
-await waitForDecisions(1);
-await page.locator('[data-testid="live-step"]').click();
-await waitForDecisions(2);
-check("two Steps are two decisions", (await decisionsShown()) === 2);
-
-const meta = await text("decision-meta");
-check("the panel is showing the newest of them", /decision\s+2\b/.test(meta.replace(/\s+/g, " ")),
-      meta.replace(/\s+/g, " ").trim());
-// Waited for rather than sampled: the two `<img>`s are being replaced several times a second, so
-// any single instant may catch one of them mid-decode.
-// The sizes are read *inside* the wait and handed back, not sampled after it: a second evaluate
-// would run a frame later, by which time the src has been swapped again.
-let pictures = null;
-try {
-  const handle = await page.waitForFunction(() => {
-    const out = ["live-agentview", "live-wrist"].map((id) => {
-      const img = document.querySelector(`[data-testid="${id}"]`);
-      return img === null ? null : { w: img.naturalWidth, h: img.naturalHeight };
-    });
-    return out.every((p) => p !== null && p.w > 0) ? out : false;
-  }, null, { timeout: 20000 });
-  pictures = await handle.jsonValue();
-} catch { /* reported by the check below */ }
-check("both cameras decoded a real picture",
-      pictures !== null && pictures.every((p) => p.w === 256 && p.h === 256),
-      JSON.stringify(pictures));
-const stateShown = await page.evaluate(() => {
-  const el = document.querySelector('[data-testid="state-toggle"]');
-  el.click();
-  return true;
-});
-await page.waitForSelector('[data-testid="state-text"]');
-const paragraph = await text("state-text");
-check("the paragraph the model read is on the page",
-      stateShown && paragraph.includes("x:") && paragraph.length > 200, `${paragraph.length} chars`);
-await page.locator('[data-testid="state-toggle"]').click();
-
-// ----------------------------------------------------------------------------- the override
-const before = await bars("move_x");
-check("a live candidate bar is a control", before !== null && before.every((b) => b.tag === "BUTTON"),
-      JSON.stringify(before));
-const wanted = before.find((b) => !b.chosen);
-await page.locator(`[data-testid="bar-move_x-${wanted.id}"]`).click();
-await page.waitForSelector('[data-testid="armed-move_x"]', { timeout: 10000 });
-check(`holding move_x = ${wanted.id} is shown as held`,
-      (await text("armed-move_x")).includes(wanted.id), await text("armed-move_x"));
-const armedBars = await bars("move_x");
-check("and it is the clicked candidate that is marked",
-      armedBars.find((b) => b.armed)?.id === wanted.id, JSON.stringify(armedBars));
-
+// One override, while it runs: a candidate bar is a control, drawn as one only on hover. The bars
+// are redrawn with every decision, so the click is retried until the console reports it held.
+let bars = [];
+let wanted = null;
+for (let attempt = 0; attempt < 10 && wanted === null; attempt += 1) {
+  bars = await page.locator('[data-testid="decision-move_x"] .rj-bar').evaluateAll(
+    (els) => els.map((e) => ({ tag: e.tagName, id: e.getAttribute("data-testid").replace(/^bar-move_x-/, ""),
+                               chosen: e.classList.contains("rj-bar--chosen"), testid: e.getAttribute("data-testid") })));
+  const pick = bars.find((b) => !b.chosen && b.id !== "hold") ?? bars.find((b) => !b.chosen);
+  if (pick === undefined) break;
+  await page.locator(`[data-testid="${pick.testid}"]`).click({ timeout: 1000 }).catch(() => {});
+  const held = await page.waitForFunction(() => document.querySelector('[data-testid="armed-move_x"], [data-testid="overridden-move_x"]') !== null,
+    null, { timeout: 1500 }).then(() => true, () => false);
+  if (held) wanted = pick;
+}
+check("a candidate bar is a control while the episode runs", bars.length === 3 && bars.every((b) => b.tag === "BUTTON") && wanted !== null,
+      bars.map((b) => b.tag).join(","));
+await page.waitForTimeout(1500);
+const after = await canvasShot();
+check("the 3D scene moves with the arm", !before.equals(after));
 await page.mouse.move(5, 5);
-await page.screenshot({ path: `${SHOTS}/console-armed.png` });
+await page.evaluate(() => window.scrollTo(0, 0));
+await page.screenshot({ path: `${SHOTS}/live-1440.png` });
+await page.setViewportSize({ width: 1024, height: 820 });
+await page.waitForTimeout(500);
+await page.screenshot({ path: `${SHOTS}/live-1024.png` });
+await page.setViewportSize({ width: 1440, height: 900 });
 
-// The picture really is the episode's, not one still frame: the console stamps each render with a
-// sequence number, and five control steps later it has to have moved.
-const frameSeq = () => page.evaluate(async () =>
-  Number((await fetch("frame/agentview.png", { cache: "no-store" })).headers.get("x-frame-seq")));
-const seqBefore = await frameSeq();
-await page.locator('[data-testid="live-step"]').click();
-await waitForDecisions(3);
-const seqAfter = await frameSeq();
-check("the camera stream advances with the episode", seqAfter >= seqBefore + 5,
-      `frame ${seqBefore} → ${seqAfter}`);
-await page.waitForSelector('[data-testid="overridden-move_x"]', { timeout: 20000 });
-const forced = await bars("move_x");
-check("the forced answer is the one that executed",
-      forced.find((b) => b.chosen)?.id === wanted.id, JSON.stringify(forced));
-check("and the decision says it was overridden",
-      (await text("overridden-move_x")).trim() === "overridden");
-check("nothing is held any more: an override is one decision, not a setting",
-      (await count("armed-move_x")) === 0);
+// ------------------------------------------------------------------------ to its end, saved by itself
+await waitStatus(["done", "failed"], 240000);
+check("the episode ran to its own end, successfully", (await text("session-status")) === "done");
+await page.waitForFunction((was) => {
+  const top = document.querySelector('[data-testid="dataset-runs"] [data-testid^="dataset-run-"]');
+  return top !== null && top.getAttribute("data-testid") !== was && top.getAttribute("data-testid").startsWith("dataset-run-live-");
+}, firstTop, { timeout: 120000 });
+const savedId = (await topRun()).replace(/^dataset-run-/, "");
+check("it was saved as a run by itself and is at the top of the task's runs", savedId.startsWith("live-"), savedId);
+await page.waitForFunction(() => document.querySelector('[data-testid="session-start"]') !== null, null, { timeout: 30000 });
+check("and the bar reads Start again", await by("session-start").isEnabled());
+await page.screenshot({ path: `${SHOTS}/live-done-1440.png` });
+const bundle = await page.evaluate(async (id) => (await fetch(`replays/${id}/episode.json`)).json(), savedId);
+check("the saved run succeeded", bundle.success === true && bundle.terminated_by === "success", bundle.terminated_by);
+const forced = bundle.decisions.filter((d) => d.questions.move_x?.overridden === true);
+check("the answer held while it ran is recorded as overridden", forced.length === 1 && forced[0].questions.move_x.choice === wanted?.id,
+      `${forced.length} overridden, move_x = ${forced[0]?.questions.move_x.choice}`);
+const qposBytes = await page.evaluate(async (b) => (await (await fetch(`replays/${b.id}/${b.qpos.path}`)).arrayBuffer()).byteLength, bundle);
+check("the saved run carries one pose row per video frame", qposBytes === bundle.total_frames * bundle.qpos.nq * 4,
+      `${qposBytes} bytes, ${bundle.total_frames} frames`);
+const sceneStatus = await page.evaluate(async (h) => (await fetch(`replays/scenes/${h}/scene.xml`)).status, bundle.scene.hash);
+check("and its scene is served beside it", sceneStatus === 200, bundle.scene.hash.slice(0, 12));
 
-// ------------------------------------------------------------------------------ run to the end
-await page.locator('[data-testid="live-run"]').click();
-await page.waitForFunction(() => {
-  const chip = document.querySelector('[data-testid="live-connection"]')?.innerText.trim();
-  return chip === "done" || chip === "error";
-}, null, { timeout: 600000 });
-const outcome = (await count("live-outcome")) === 1 ? (await text("live-outcome")).trim() : "—";
-const line = (await text("live-line")).trim();
-check("the episode ran to its own end", (await text("live-connection")).trim() === "done", line);
-check("and it succeeded", outcome === "success", `${outcome} · ${line}`);
-const total = await decisionsShown();
-check("with more decisions than the three taken by hand", total > 3, `${total} decisions`);
+// ------------------------------------------------------------------------ open it on the Runs tab
+await by(`dataset-run-${savedId}`).click();
+await page.waitForFunction((id) => {
+  const v = document.querySelector('[data-testid="agentview"]');
+  const s = document.querySelector('[data-testid="replay-scene"] [data-testid="scene-status"]');
+  return location.hash === `#/${id}` && v !== null && v.readyState >= 1 && s !== null && s.innerText.trim() === "ready";
+}, savedId, { timeout: 120000 });
+check("the saved run opens on the Runs tab, 3D scene and all",
+      (await by(`replay-${savedId}`).getAttribute("aria-pressed")) === "true");
+await page.screenshot({ path: `${SHOTS}/live-saved-replay-1440.png` });
 
-await page.screenshot({ path: `${SHOTS}/console-done.png` });
-
-// ------------------------------------------------------------------------------------- save
-await page.locator('[data-testid="live-save"]').click();
-await page.waitForSelector('[data-testid="live-saved"]', { timeout: 120000 });
-const saved = (await text("live-saved")).replace(/\s+/g, " ").trim();
-const savedId = /saved\s+(\S+)/.exec(saved)?.[1] ?? "";
-check("the episode was written out as a bundle", savedId.startsWith("live-"), saved);
-const bundle = await page.evaluate(
-  async (id) => (await fetch(`replays/${id}/episode.json`)).json(), savedId);
-check("the bundle is served by the console without a rebuild",
-      bundle.id === savedId && bundle.decisions.length === total,
-      `${bundle.decisions.length} decisions, success=${bundle.success}`);
-check("the overridden decision survived into the file",
-      bundle.decisions[2].questions.move_x.overridden === true
-      && bundle.decisions[2].questions.move_x.choice === wanted.id,
-      JSON.stringify(bundle.decisions[2].questions.move_x.choice));
-check("the bundle carries both videos and a poster",
-      bundle.media.agentview?.codec === "h264" && bundle.media.wrist !== undefined
-      && bundle.poster === "poster.jpg",
-      JSON.stringify(Object.keys(bundle.media)));
-
-// --------------------------------------------------------------- back to a replay, and reset
-await page.locator('[data-testid="strip-drawer"]').click();
-await page.waitForSelector('[data-testid="agentview"]', { timeout: 20000 });
-check("a recorded bundle still replays in the same page",
-      (await page.locator('[data-testid="replay-title"]').count()) === 1);
-await page.locator('[data-testid="strip-live"]').click();
-await page.waitForSelector('[data-testid="live-controls"]');
-check("and the console is still there when you come back",
-      (await text("live-connection")).trim() === "done");
-
-await page.locator('[data-testid="live-reset"]').click();
-await page.waitForFunction(
-  () => document.querySelector('[data-testid="live-connection"]')?.innerText.trim() === "idle",
-  null, { timeout: 60000 });
-check("Reset lets go of the simulator and the console is ready for another",
-      (await text("live-connection")).trim() === "idle");
+// ------------------------------------------------------------------------ Stop keeps what was run
+await by("side-tab-dataset").click();
+await page.waitForSelector('[data-testid="session-start"]');
+const topBefore = await topRun();
+await by("session-start").click();
+await waitStatus(["running"], 30000);
+await waitDecisionAtLeast(3);
+await by("session-stop").click();
+await page.waitForFunction((was) => {
+  const top = document.querySelector('[data-testid="dataset-runs"] [data-testid^="dataset-run-"]');
+  return top !== null && top.getAttribute("data-testid") !== was;
+}, topBefore, { timeout: 120000 });
+const stoppedId = (await topRun()).replace(/^dataset-run-/, "");
+const stopped = await page.evaluate(async (id) => (await fetch(`replays/${id}/episode.json`)).json(), stoppedId);
+check("Stop ends it, and what was run is saved too", stopped.terminated_by === "in_progress" && stopped.decisions.length >= 3,
+      `${stoppedId}: ${stopped.decisions.length} decisions, ${stopped.terminated_by}`);
+await page.waitForSelector('[data-testid="session-start"]', { timeout: 30000 });
+check("and the console is ready for another", await by("session-start").isEnabled());
 
 check("no console errors", consoleErrors.length === 0, consoleErrors.join(" | ").slice(0, 400));
-
 await browser.close();
-console.log(`\nsaved bundle: ${savedId}`);
-console.log(failures === 0 ? "ALL LIVE CHECKS PASSED" : `${failures} CHECK(S) FAILED`);
+console.log(failures === 0 ? `\nALL CHECKS PASSED (saved ${savedId}, ${stoppedId})` : `\n${failures} CHECK(S) FAILED (saved ${savedId}, ${stoppedId})`);
 process.exit(failures === 0 ? 0 : 1);

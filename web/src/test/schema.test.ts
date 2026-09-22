@@ -3,7 +3,7 @@
  * site actually ships**, read off disk. A schema test that only checks hand-written fixtures
  * proves the validator is self-consistent; this one proves the recorder and the page agree.
  */
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateEpisode } from "../data/schema";
@@ -11,7 +11,8 @@ import { decisionAt } from "../data/lookup";
 import { orderQuestions } from "../data/questions";
 import { DEFAULT_EPISODE } from "../data/route";
 
-const ROOT = join(__dirname, "..", "..", "public", "replays");
+const SHOWCASE = join(__dirname, "..", "..", "..", "showcase");
+const ROOT = join(SHOWCASE, "replays");
 
 function minimal(): Record<string, unknown> {
   return {
@@ -29,8 +30,17 @@ describe("validateEpisode", () => {
     expect(validateEpisode(minimal()).ok).toBe(true);
   });
 
+  it("reads both versions: 2 added the pose table and the scene", () => {
+    expect(validateEpisode({ ...minimal(), schema_version: 2 }).ok).toBe(true);
+    const withScene = { ...minimal(), schema_version: 2,
+      qpos: { path: "qpos.bin", frames: 3, nq: 48, dtype: "<f4" }, scene: { hash: "abc", nq: 48 } };
+    expect(validateEpisode(withScene).ok).toBe(true);
+    const bigEndian = { ...withScene, qpos: { ...withScene.qpos, dtype: ">f4" } };
+    expect(validateEpisode(bigEndian).ok).toBe(false);
+  });
+
   it("names the version it cannot read rather than guessing", () => {
-    const bad = { ...minimal(), schema_version: 2 };
+    const bad = { ...minimal(), schema_version: 3 };
     const result = validateEpisode(bad);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.problems[0]).toMatch(/schema_version/);
@@ -67,7 +77,8 @@ describe("validateEpisode", () => {
 });
 
 const bundles = existsSync(ROOT)
-  ? readdirSync(ROOT, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name)
+  ? readdirSync(ROOT, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && e.name !== "scenes").map((e) => e.name)
   : [];
 
 describe.runIf(bundles.length > 0)("the bundles this site ships", () => {
@@ -123,5 +134,19 @@ describe.runIf(bundles.length > 0)("the bundles this site ships", () => {
       "move_x", "move_y", "move_z", "size_x", "size_y", "size_z", "yaw", "rim", "grip", "subgoal",
     ]);
     expect(episode.decisions[0].grounding).not.toBeNull();
+
+    // The 3D scene: one pose row per video frame, and a scene whose every asset is in the pool.
+    const qpos = episode.qpos!;
+    expect(qpos.frames).toBe(episode.total_frames);
+    expect(statSync(join(ROOT, name, qpos.path)).size).toBe(qpos.frames * qpos.nq * 4);
+    // robopp's compiled scene, in showcase/scenes, with every asset it names beside it.
+    const scene = join(SHOWCASE, "scenes", episode.scene!.hash);
+    const xml = readFileSync(join(scene, "scene.xml"), "utf-8");
+    const assets = [...xml.matchAll(/\sfile="assets\/([^"]+)"/g)].map((m) => m[1]);
+    expect(assets.length).toBeGreaterThan(10);
+    for (const a of assets) expect(existsSync(join(scene, "assets", a)), a).toBe(true);
+    // And its task's catalogue entry, which names the same scene.
+    const task = JSON.parse(readFileSync(join(SHOWCASE, "catalogue", episode.suite, String(episode.task_index), "task.json"), "utf-8"));
+    expect(task.scene_bundle).toBe(episode.scene!.hash);
   });
 });

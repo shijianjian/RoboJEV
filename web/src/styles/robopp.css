@@ -1,0 +1,1166 @@
+/* ---------------------------------------------------------------------------
+   The design tokens and component classes of robopp's `app/src/app/globals.css`, copied
+   verbatim for the pages this app has (the shell, cards, chips, fields, the scene sidebar, the
+   run cells, the viewer, the decision console) and without the ones it does not (the runs
+   tray, tables, the dashboard, the queue, compare, prose). App-specific additions are in
+   `app.css`, so this file can be diffed against its source.
+   --------------------------------------------------------------------------- */
+:root {
+  /* surfaces */
+  --bg-0: #0a0e17;          /* page ground */
+  --bg-1: #10151f;          /* card surface */
+  --bg-2: #161d29;          /* inset: table head, code, wells */
+  --bg-3: #1d2635;          /* hover / raised control */
+  --bg-canvas: #060a12;     /* 3D canvas + video letterbox */
+
+  /* lines */
+  --line: #222c3c;
+  --line-strong: #33405428;
+  --line-bright: #3a4759;
+
+  /* text — all >= 4.5:1 on --bg-0/--bg-1 */
+  --text-1: #e9eff8;
+  --text-2: #a9b5c8;
+  --text-3: #7f8b9e;
+
+  /* accent: interactive + playback cursor */
+  --accent: #f5b301;
+  --accent-2: #ffcc45;
+  --accent-ink: #14100a;
+  --accent-soft: #f5b3011f;
+
+  /* semantic */
+  --ok: #3ecf84;
+  --ok-soft: #3ecf841f;
+  --bad: #f2555a;
+  --bad-soft: #f2555a1f;
+  --run: #58a6ff;
+  --run-soft: #58a6ff1f;
+  --queued: #97a3b6;
+  --queued-soft: #97a3b61a;
+  --warn: #e8a33d;
+  --warn-soft: #e8a33d1f;
+
+  /* radii */
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 12px;
+  --r-pill: 999px;
+
+  /* spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* type scale */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+
+  /* elevation */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-3: 0 -8px 24px -14px rgba(0, 0, 0, 0.85);
+
+  /* fonts — set by next/font in layout.tsx, with a stack that stands alone */
+  --font-sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --header-h: 52px;
+
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------------------------- base */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  /* a very quiet vignette so the page ground reads as a panel, not a void */
+  background-image: radial-gradient(1200px 500px at 50% -200px, #131b2a 0%, var(--bg-0) 70%);
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+a { color: var(--text-1); text-decoration-color: var(--line-bright); text-underline-offset: 2px; }
+a:hover { color: var(--accent-2); text-decoration-color: currentColor; }
+
+h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
+h1 { font-size: var(--fs-2xl); }
+h2 { font-size: var(--fs-xl); }
+h3 { font-size: var(--fs-lg); }
+p { margin: 0 0 var(--s-3); }
+p:last-child { margin-bottom: 0; }
+
+code, pre, .mono { font-family: var(--font-mono); font-variant-ligatures: none; }
+code { font-size: 0.92em; }
+pre {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  padding: var(--s-3);
+  overflow: auto;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-1);
+}
+
+::selection { background: var(--accent-soft); }
+
+.u-muted { color: var(--text-2); }
+.u-dim { color: var(--text-3); }
+.u-ok { color: var(--ok); }
+.u-bad { color: var(--bad); }
+.u-mono { font-family: var(--font-mono); }
+.u-num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.u-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.u-stack { display: flex; flex-direction: column; gap: var(--s-4); }
+.u-row { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.u-sr {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* legacy helpers kept so nothing that still uses them loses its colour */
+.muted { color: var(--text-2); }
+.ok { color: var(--ok); }
+.bad { color: var(--bad); }
+
+/* --------------------------------------------------------------------------- shell */
+/* The whole window, on every page: header, footer and content alike. What this site shows is
+   boards of runs, tables and a viewer - all of them better the more width there is - and the
+   pages that are prose instead cap their own text column (`.prose`, `.hero__lede`, `.page-head`),
+   which is the measure that actually has to stay readable. The gutters are all that is left of
+   the container. */
+.shell { width: 100%; padding: 0 var(--s-5); }
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-0) 86%, transparent);
+  backdrop-filter: blur(10px);
+}
+.app-header__inner { display: flex; align-items: center; gap: var(--s-6); width: 100%; }
+.app-header__brand {
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.app-header__brand:hover { color: var(--text-1); }
+.app-header__mark {
+  width: 10px; height: 10px; border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.app-header__nav { display: flex; align-items: center; gap: var(--s-1); }
+.app-header__link {
+  padding: 5px var(--s-3);
+  border-radius: var(--r-1);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  text-decoration: none;
+}
+.app-header__link:hover { background: var(--bg-2); color: var(--text-1); }
+.app-header__link--active { color: var(--text-1); background: var(--bg-2); }
+.app-header__slot { margin-left: auto; display: flex; align-items: center; gap: var(--s-3); font-size: var(--fs-xs); color: var(--text-3); }
+
+.app-main { padding: var(--s-5) 0 var(--s-8); }
+.app-footer {
+  border-top: 1px solid var(--line);
+  padding: var(--s-4) 0 var(--s-6);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+/* The one line about what this site is, and the one page that says more: About is a reference a
+   reader looks up, not a destination, so it sits at the end of that line rather than in the bar. */
+.app-footer__inner { display: flex; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.app-footer__link { margin-left: auto; color: var(--text-2); text-decoration: none; white-space: nowrap; }
+.app-footer__link:hover { color: var(--accent); }
+
+/* --------------------------------------------------------------------------- page header */
+.page-header { display: flex; align-items: flex-start; gap: var(--s-5); margin-bottom: var(--s-5); }
+.page-header__main { min-width: 0; flex: 1 1 auto; }
+.page-header__eyebrow {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: var(--s-2);
+}
+.page-header__title { font-size: var(--fs-2xl); margin: 0; }
+/* The one sentence under a page title is prose, and prose in a shell that is the whole window
+   would run the width of the screen: it keeps a measure of its own. */
+.page-header__sub { color: var(--text-2); margin: var(--s-2) 0 0; font-size: var(--fs-md); max-width: 72ch; }
+.page-header__meta { margin-top: var(--s-3); }
+.page-header__actions { display: flex; align-items: center; gap: var(--s-2); flex-shrink: 0; }
+
+/* --------------------------------------------------------------------------- card */
+.card {
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-1);
+  min-width: 0;
+}
+.card--flush { overflow: hidden; }
+.card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--line);
+}
+.card__title { font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.02em; color: var(--text-1); }
+.card__sub { font-size: var(--fs-xs); color: var(--text-3); }
+.card__actions { margin-left: auto; display: flex; align-items: center; gap: var(--s-2); }
+.card__body { padding: var(--s-4); }
+.card__body--tight { padding: var(--s-3); }
+.card__body--none { padding: 0; }
+
+/* --------------------------------------------------------------------------- chip */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-bright);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.chip__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.chip--mono { font-family: var(--font-mono); }
+.chip--success { color: var(--ok); background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.chip--failure { color: var(--bad); background: var(--bad-soft); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+.chip--running { color: var(--run); background: var(--run-soft); border-color: color-mix(in srgb, var(--run) 35%, transparent); }
+.chip--queued  { color: var(--queued); background: var(--queued-soft); border-color: color-mix(in srgb, var(--queued) 35%, transparent); }
+.chip--warn    { color: var(--warn); background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.chip--accent  { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.chip--neutral { color: var(--text-2); }
+.chip--lg { font-size: var(--fs-sm); padding: 3px 11px; }
+/* the same pill, pressable: one row of them is the states of one filter, so the pressed one is
+   the accent chip and the rest stay quiet. `aria-pressed` carries it for both. */
+.chip-filter { font: inherit; font-size: var(--fs-xs); line-height: 1.6; cursor: pointer; }
+.chip-filter:hover { color: var(--text-1); border-color: var(--text-3); }
+.chip-filter { text-decoration: none; }
+.chip-filter[aria-pressed="true"], .chip-filter[aria-current="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* --------------------------------------------------------------------------- button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  min-height: 30px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--line-bright);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.btn:hover { background: var(--bg-3); border-color: var(--text-3); color: var(--text-1); }
+.btn:active { transform: translateY(0.5px); }
+/* aria-disabled covers the inert non-button cases (a "link" with nothing to link to yet). */
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn--primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: var(--accent-ink); }
+.btn--ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn--ghost:hover { background: var(--bg-2); color: var(--text-1); }
+.btn--icon { width: 34px; padding: 0; }
+.btn--sm { min-height: 26px; padding: 3px 9px; font-size: var(--fs-xs); }
+.btn svg { display: block; }
+
+/* --------------------------------------------------------------------------- fields */
+.field { display: inline-flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field__label {
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.input, .select {
+  appearance: none;
+  background: var(--bg-2);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-2);
+  color: var(--text-1);
+  font: inherit;
+  font-size: var(--fs-sm);
+  padding: 6px 10px;
+  min-height: 30px;
+  min-width: 0;
+}
+.select {
+  padding-right: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 13px, calc(100% - 9px) 13px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.input::placeholder { color: var(--text-3); }
+.input:hover, .select:hover { border-color: var(--text-3); }
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.toolbar__spacer { margin-left: auto; }
+
+/* --------------------------------------------------------------------------- group heading */
+/* The small uppercase label over a group of controls - the Replay sidebar's Models and Datasets,
+   the Selection panel's own title. Named for the sidenav the Models and Datasets sections used
+   to be; the rest of that component's rules went with it. */
+.sidenav__heading {
+  margin: var(--s-2) 0 var(--s-1);
+  padding: 0 var(--s-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+
+/* The stage's tab strip: the card's head is the mode switch. Back on the Run tab's Scene card,
+   which is a stage that shows either the start state or a recorded run of it - the two readings
+   of one scene, and so two tabs rather than two pages. The suite's own facts ride along on the
+   right, where the card's subtitle had them. */
+.stage-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-2) var(--s-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+.stage-tabs__strip { display: flex; align-items: stretch; gap: var(--s-3); flex-wrap: wrap; min-width: 0; }
+.stage-tabs__meta { margin-left: auto; padding-bottom: var(--s-2); min-width: 0; }
+.stage-tab { display: inline-flex; align-items: center; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.stage-tab__label {
+  appearance: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  cursor: pointer;
+  padding: var(--s-2) 2px;
+}
+.stage-tab__label:hover { color: var(--text-1); }
+.stage-tab.is-active { border-bottom-color: var(--accent); }
+.stage-tab.is-active .stage-tab__label { color: var(--text-1); }
+.stage-tab__close {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: var(--fs-md);
+  line-height: 1;
+  padding: 0 2px 0 6px;
+}
+.stage-tab__close:hover { color: var(--text-1); }
+
+/* the task facts, collapsed under the stage once they have been seen */
+.scene-card__facts { margin-top: var(--s-3); }
+.facts-details { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-3); padding: var(--s-3) var(--s-4); }
+.facts-details > summary { cursor: pointer; list-style: none; font-size: var(--fs-sm); color: var(--text-2); }
+.facts-details > summary::-webkit-details-marker { display: none; }
+.facts-details > summary:hover { color: var(--text-1); }
+.facts-details[open] > summary { color: var(--text-1); margin-bottom: var(--s-4); }
+
+/* --------------------------------------------------------------------------- run cells */
+/* The model a cell's run loaded, on one line: the longest string on a cell, and the one that
+   truncates rather than pushing the cell wider. */
+.runs-here__policy { font-size: var(--fs-sm); color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* One cell per run, wrapping across the card: a run is a small identity, and a page of them
+   reads as a board rather than as a column of lines. In the Replay tab's runs column they are
+   one per row instead - see the rail's own rule under `.run-rail`. */
+.run-cells {
+  list-style: none;
+  margin: 0;
+  padding: var(--s-3);
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--s-2);
+}
+.run-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+}
+.run-cell:has(.run-cell__hit):hover { border-color: var(--line-bright); }
+/* The 2px accent edge a selected row used to carry down its left side, all the way round: at
+   this size the cell *is* the row. */
+.run-cell.is-selected {
+  background: var(--bg-2);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* The whole cell is the Replay button, stretched under the two controls that mean something
+   else. Transparent and empty: its label is the accessible name, and what it looks like is the
+   cell above it. */
+.run-cell__hit {
+  position: absolute;
+  inset: 0;
+  appearance: none;
+  background: none;
+  border: 0;
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+.run-cell__hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.run-cell__top { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+/* Above the stretched button, so a tick or a ↗ is itself and not a replay. */
+.run-cell__tools { position: relative; z-index: 1; margin-left: auto; display: flex; align-items: center; gap: var(--s-1); }
+.run-cell__link { color: var(--text-3); text-decoration: none; font-size: var(--fs-sm); line-height: 1; padding: 0 2px; }
+.run-cell__link:hover { color: var(--accent); }
+.run-cell__outcome { display: flex; align-items: center; gap: var(--s-1); flex-wrap: wrap; font-size: var(--fs-xs); }
+.run-cell__meta { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; font-size: var(--fs-xs); }
+
+/* the action plots under a compact replay: one column, no fact sheet beside them */
+.replay-plots { margin-top: var(--s-4); }
+
+/* the run form: a search box, one row per policy (checkbox / name+checkpoint / recorded-here
+   hint), then the footer that queues them. The card is as tall as the stage beside it, so the
+   list of policies is the one part that scrolls and the footer stays where it is. */
+.run-card { display: flex; flex-direction: column; min-height: 0; }
+.run-card__body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.run-card__form { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.policy-search { width: 100%; flex: none; }
+.policy-picker { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--s-3); }
+.run-card__footer { flex: none; display: flex; flex-direction: column; gap: var(--s-2); }
+.run-card__footer .footnote { margin: 0; }
+/* The footnotes under the form are what the panel says about the numbers above them, not
+   paragraphs of their own: tight enough that they cost the model list as little height as
+   possible. */
+.run-card__body > .footnote { margin-top: var(--s-2); }
+.policy-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px var(--s-3); align-items: start; }
+.policy-row__label { display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer; }
+.policy-row__name { font-size: var(--fs-sm); color: var(--text-1); }
+.policy-row__repo { font-size: var(--fs-xs); color: var(--text-3); overflow-wrap: anywhere; }
+.policy-row__hint { grid-column: 2; display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; font-size: var(--fs-xs); }
+.checkbox { width: 15px; height: 15px; margin: 1px 0 0; accent-color: var(--accent); cursor: pointer; }
+.checkbox:disabled { cursor: default; opacity: 0.5; }
+/* A planned policy: listed, but nothing here can be ticked yet. */
+.policy-row--planned .policy-row__name { color: var(--text-3); }
+.policy-row--planned .policy-row__label { cursor: default; }
+
+.facts { display: flex; flex-direction: column; gap: var(--s-4); }
+.facts__group { display: flex; flex-direction: column; gap: var(--s-2); }
+.facts__label { font-size: var(--fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.facts__instruction { margin: 0; color: var(--text-1); }
+.facts__goal { margin: 0; padding-left: var(--s-4); color: var(--text-1); font-size: var(--fs-sm); }
+.facts__types { display: flex; flex-direction: column; gap: var(--s-2); margin: 0; }
+.facts__type { display: flex; flex-direction: column; gap: 4px; }
+.facts__type-name { font-size: var(--fs-xs); color: var(--text-2); }
+.facts__instances { margin: 0; gap: var(--s-1); }
+
+@media (max-width: 1499px) {
+  /* Narrower than four columns, the run card has no sticky column to be bound by: it sizes to its
+     content in flow, and only a long list of models scrolls, inside the card rather than taking
+     the page with it. The cap is what keeps the card compact as the registry grows - which is the
+     whole point of the list scrolling at all. */
+  .run-card__body { overflow-y: visible; }
+  .policy-picker { max-height: 320px; }
+}
+
+/* --------------------------------------------------------------------------- sidebars */
+/* The scene sidebar's own vocabulary: a group of rows, each a foldable family with its
+   suites (and, under the selected one, its tasks) beneath it. It outlived the tab it was
+   written for - the Run tab's sidebar and TaskRow are what wear these now. */
+.replay-side { display: flex; flex-direction: column; gap: var(--s-3); padding-right: var(--s-2); }
+.replay-group { display: flex; flex-direction: column; gap: 2px; }
+.replay-group .sidenav__heading { margin: 0 0 var(--s-1); padding: 0; }
+
+/* One backbone: its "all weights" checkbox beside the disclosure that holds them, so the
+   checkbox is a sibling of the summary rather than a control inside it. */
+.replay-fold { min-width: 0; }
+
+/* The disclosure itself - one backbone's weights, or one simulator family's suites. */
+.replay-fold > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-2) var(--s-2) 0;
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--text-1);
+}
+.replay-fold > summary::-webkit-details-marker { display: none; }
+.replay-fold > summary:hover { color: var(--accent-2); }
+.replay-row__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replay-row__count { margin-left: auto; font-size: var(--fs-xs); }
+
+/* The boxes themselves: a checkbox, a name, and under it the small print that says how much is
+   behind the box - what it was trained on, how many tasks, how many runs. */
+.replay-list { list-style: none; margin: 0 0 var(--s-2); padding: 0 0 0 var(--s-3); display: flex; flex-direction: column; gap: 2px; }
+.replay-check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px var(--s-2);
+  align-items: start;
+  padding: 3px var(--s-2) 3px 0;
+  border-radius: var(--r-1);
+  cursor: pointer;
+}
+.replay-check:hover { background: var(--bg-2); }
+.replay-check__body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.replay-check__name { font-size: var(--fs-sm); color: var(--text-1); overflow-wrap: anywhere; }
+.replay-check__sub { font-size: var(--fs-xs); overflow-wrap: anywhere; }
+/* With one suite ticked its tasks hang under it, each with the 32px thumbnail that is the only
+   way to tell one LIBERO task from another at a glance. */
+.replay-tasks { list-style: none; margin: 2px 0 var(--s-2); padding: 0 0 0 var(--s-4); display: flex; flex-direction: column; gap: 2px; }
+.replay-check--task { grid-template-columns: auto auto minmax(0, 1fr); }
+/* The instruction is what tells two kitchen scenes apart, so a task row carries it - but the
+   first words are what does the telling, and a sidebar 280px wide would otherwise give a long
+   one six lines and push every other task off the screen. */
+.replay-check--task .replay-check__sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.replay-task__thumb {
+  width: 32px;
+  height: 32px;
+  display: block;
+  object-fit: cover;
+  border-radius: var(--r-1);
+  background: var(--bg-2);
+}
+.replay-task__thumb--none { border: 1px dashed var(--line); background: transparent; }
+
+/* the grid's own cell additions: where the run was recorded, and whether it is one of yours */
+.run-cell__where { font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Above the stretched replay button, where this line is itself a control (the Run tab's rail):
+   the scene it names is where the page goes, which is a different question from the one cell
+   under the cursor. Styled as the link it used to be, because that is what it reads as. */
+.run-cell__where a, .run-cell__scene { position: relative; z-index: 1; }
+.run-cell__scene {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.run-cell__scene:hover { text-decoration: underline; }
+.run-cell__scene:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.run-cell__mine {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------- run tab */
+/* Four columns, the same shape the Replay tab is read in: what to run it on (datasets and their
+   tasks, in the same 280px sidebar), the scene that names it, the card that queues it, and beside
+   that the rail - the line everyone is waiting in, over the runs it has already produced.
+   The two right-hand columns are fixed widths because neither is prose: the run card is a form,
+   and the rail is a list of short rows. The scene takes what is left, which is what stops it
+   spreading a tabletop across half a metre of screen with the queue pushed off the bottom.
+
+   Above 1500px all three side columns stick under the top bar with their own scroll, exactly as
+   the Replay tab's do: a registry of forty models, a line of thirty jobs and a hundred recorded
+   runs must not drag each other, and none of them may make the page taller than the window. */
+.run-tab {
+  display: grid;
+  /* Narrowest first: one column, with the sidebar as a drawer over the scene. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-5);
+  align-items: start;
+}
+.run-tab__side { min-width: 0; }
+.run-tab__scene { min-width: 0; }
+.run-tab__panel { min-width: 0; }
+.run-tab__rail { min-width: 0; }
+.run-tab__side-summary { display: none; }
+
+/* --------------------------------------------------------------------------- run rail */
+/* The queue over the runs it has produced, in one column. Each card scrolls inside itself, so a
+   line of thirty jobs cannot push the runs below it off the screen and a hundred recorded runs
+   cannot hide the queue. Capped here and unbound in the four-column layout, where the column's
+   own height is what divides them. */
+.run-rail { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.rail-card { display: flex; flex-direction: column; min-height: 0; }
+.rail-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* The head's two chips are a choice, not a pair of actions, so they sit tight together and wrap
+   under the title rather than squeezing it. */
+.rail-card .card__head { flex-wrap: wrap; row-gap: var(--s-2); }
+
+.queue-empty { margin: 0; padding: var(--s-4); font-size: var(--fs-sm); }
+
+/* Under the rail's list of runs: what two ticks would open, and the way out of them. It is the
+   site's one door to /compare, so it is always on the card rather than appearing only once a
+   pair is complete - a control nobody can see is a page nobody can find. */
+.compare-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  padding: var(--s-2) var(--s-3);
+  font-size: var(--fs-xs);
+  border-top: 1px solid var(--line);
+}
+.compare-bar > span:first-child { min-width: 0; flex: 1 1 auto; }
+
+@media (max-width: 999px) {
+  /* The drawer: the same markup, opened by its own summary, over the scene rather than beside it.
+     The workspace keeps it closed at this width (see NARROW in RunWorkspace.tsx), so a narrow
+     screen lands on the scene rather than on a page of datasets. */
+  .run-tab__side {
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-3);
+    padding: var(--s-3);
+  }
+  .run-tab__side-summary {
+    display: block;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+  }
+  .run-tab__side-summary::-webkit-details-marker { display: none; }
+  .run-tab__side[open] .run-tab__side-summary { color: var(--text-1); margin-bottom: var(--s-3); }
+}
+
+@media (min-width: 1000px) {
+  /* Two columns: the sidebar, and everything else stacked beside it. */
+  .run-tab { grid-template-columns: 280px minmax(0, 1fr); }
+  /* Its own scroll, like the Replay sidebar: a suite of ninety tasks must not drag the scene off
+     the screen with it. */
+  .run-tab__side {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-4));
+    max-height: calc(100vh - var(--header-h) - var(--s-6));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .run-tab__scene, .run-tab__panel, .run-tab__rail { grid-column: 2; }
+}
+
+@media (min-width: 1200px) {
+  /* Three columns: the run card comes up beside the scene, and the rail is a full-width row under
+     both - its two cards side by side rather than stacked, since the row is wide and short. */
+  .run-tab { grid-template-columns: 280px minmax(0, 1fr) 380px; }
+  .run-tab__scene { grid-column: 2; grid-row: 1; }
+  .run-tab__panel { grid-column: 3; grid-row: 1; }
+  .run-tab__rail { grid-column: 2 / -1; grid-row: 2; }
+  .run-rail { flex-direction: row; }
+  .run-rail > .rail-card { flex: 1 1 0; min-width: 0; }
+}
+
+@media (min-width: 1500px) {
+  /* Four columns, and the two right-hand ones are bound by the window rather than by what is in
+     them: the model list scrolls inside the run card with its footer pinned under it, and the
+     rail's two cards split the same height between them. */
+  .run-tab { grid-template-columns: 280px minmax(0, 1fr) 380px 340px; }
+  .run-tab__rail { grid-column: 4; grid-row: 1; }
+  .run-tab__panel, .run-tab__rail {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-4));
+    height: calc(100vh - var(--header-h) - var(--s-6));
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  /* The card fills the column and shrinks to it: `min-height: 0` is what lets a list longer than
+     the window shrink at all rather than pushing the card past the bottom of the screen. */
+  .run-tab__panel > .run-card, .run-tab__rail > .run-rail { flex: 1 1 auto; min-height: 0; }
+  .run-rail { flex-direction: column; }
+  .run-rail > .rail-card { flex: 1 1 50%; min-height: 0; }
+  .run-rail .rail-card__body { max-height: none; }
+  /* One cell per row: 340px carrying a model name, a scene, an outcome and a seed has no second
+     column to spare - the same rule the Replay tab's runs column follows. */
+  .run-rail .run-cells { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-height: 700px) {
+  /* A window shorter than the form: nothing here is bound by it any more, because a list scrolled
+     down to 40px is not a list. The page scrolls instead, which is the one thing a reader can
+     always do. Last, so it wins over the sticky columns above whatever the width. */
+  .run-tab__panel, .run-tab__rail { position: static; height: auto; display: block; }
+  .run-card__body { overflow-y: visible; }
+  .policy-picker { min-height: 160px; max-height: 320px; }
+  /* Each card is its own height again, not half of a height there no longer is. */
+  .run-rail > .rail-card { flex: 0 0 auto; }
+  .run-rail .rail-card__body { max-height: 320px; }
+}
+
+/* the suite's own facts sit in the card's head, beside the title */
+.scene-card .card__head { flex-wrap: wrap; row-gap: var(--s-2); }
+.scene-card__meta { display: inline-flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.scene-card__instruction { margin: 0 0 var(--s-3); color: var(--text-1); font-size: var(--fs-lg); }
+
+/* The stage is capped at 720px: `.scene` is 16/10, so that is 450px of canvas - enough to see a
+   tabletop, and little enough that the card beside it is still the card and not a margin. In the
+   four-column layout the column is narrower than the cap anyway; the cap is what holds below it. */
+.scene-card__stage { max-width: 720px; min-width: 0; }
+/* A navigation is in flight and the preview under it is about to be replaced: dimmed, never
+   removed - an empty stage that comes back is worse than a stale one that fades. */
+.scene-card__stage--busy { opacity: 0.6; transition: opacity 120ms ease; }
+
+.policy-row__trained { font-size: var(--fs-xs); overflow-wrap: anywhere; }
+
+/* --------------------------------------------------------------------------- key/value */
+.kv { display: grid; grid-template-columns: minmax(90px, auto) 1fr; gap: 2px var(--s-4); margin: 0; font-size: var(--fs-sm); }
+.kv__k { color: var(--text-3); padding: 3px 0; white-space: nowrap; }
+.kv__v { color: var(--text-1); padding: 3px 0; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.kv__v--mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); }
+.kv--rule .kv__k, .kv--rule .kv__v { border-top: 1px solid var(--line); }
+.kv--rule > .kv__k:first-of-type, .kv--rule > .kv__k:first-of-type + .kv__v { border-top: 0; }
+
+/* --------------------------------------------------------------------------- callout */
+.callout {
+  display: flex;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-2);
+  border: 1px solid var(--line-bright);
+  background: var(--bg-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.callout__icon { flex: none; margin-top: 1px; }
+.callout__title { color: var(--text-1); font-weight: 600; margin-bottom: 2px; }
+.callout--warn { border-color: color-mix(in srgb, var(--warn) 45%, transparent); background: var(--warn-soft); }
+.callout--warn .callout__icon, .callout--warn .callout__title { color: var(--warn); }
+.callout--bad { border-color: color-mix(in srgb, var(--bad) 45%, transparent); background: var(--bad-soft); }
+.callout--bad .callout__icon, .callout--bad .callout__title { color: var(--bad); }
+
+/* --------------------------------------------------------------------------- disclosure */
+.disclosure { border: 1px solid var(--line); border-radius: var(--r-2); background: var(--bg-1); }
+.disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: var(--s-2) var(--s-3);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 5px solid var(--text-3);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+}
+.disclosure[open] > summary::before { transform: rotate(90deg); }
+.disclosure > summary:hover { color: var(--text-1); }
+.disclosure__body { padding: 0 var(--s-3) var(--s-3); }
+
+/* --------------------------------------------------------------------------- skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 25%, var(--bg-3) 37%, var(--bg-2) 63%);
+  background-size: 400% 100%;
+  animation: skeleton 1.4s ease infinite;
+  border-radius: var(--r-2);
+}
+@keyframes skeleton { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+.footnote { color: var(--text-3); font-size: var(--fs-xs); margin: var(--s-3) 0 0; }
+
+/* --------------------------------------------------------------------------- viewer */
+.replay { display: grid; gap: var(--s-3); }
+.replay__stage { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: var(--s-3); }
+
+.scene-wrap { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+.scene {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  display: block;
+  background: var(--bg-canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+}
+.replay .scene { border-radius: var(--r-3) var(--r-3) 0 0; border-bottom: 0; }
+.scene-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px var(--s-3);
+  font-size: var(--fs-xs);
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+}
+
+.cams { display: grid; gap: var(--s-3); align-content: start; }
+.cam { margin: 0; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--r-2); overflow: hidden; }
+.cam__frame { position: relative; }
+.cam video { width: 100%; display: block; aspect-ratio: 1 / 1; object-fit: contain; background: var(--bg-canvas); }
+.cam__stalled {
+  position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;
+  gap: var(--s-2); padding: var(--s-3); text-align: center; font-size: var(--fs-sm); color: var(--text-2);
+  background: color-mix(in srgb, var(--bg-canvas) 85%, transparent);
+}
+.cam__stalled a { color: var(--accent); }
+.cam figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 5px var(--s-2);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-top: 1px solid var(--line);
+}
+
+/* transport bar: sticks to the bottom of the viewport while the page scrolls */
+.transport {
+  position: sticky;
+  bottom: var(--s-3);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: color-mix(in srgb, var(--bg-1) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-3);
+}
+.transport__buttons { display: flex; align-items: center; gap: 4px; }
+.transport__range { flex: 1 1 auto; min-width: 60px; display: flex; align-items: center; }
+.transport__readout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.transport__hint { color: var(--text-3); font-size: 11px; white-space: nowrap; }
+.transport__hint kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  border: 1px solid var(--line-bright);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 0 3px;
+  color: var(--text-2);
+  background: var(--bg-2);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+  height: 18px;
+  margin: 0;
+}
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--bg-3); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--bg-3); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px; margin-top: -5px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-1);
+}
+input[type=range]::-moz-range-thumb {
+  width: 12px; height: 12px; border: 2px solid var(--bg-1);
+  border-radius: 50%; background: var(--accent);
+}
+
+/* data area under the replay */
+.run-body { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: var(--s-4); align-items: start; margin-top: var(--s-4); }
+
+.plots { margin: 0; }
+.plot { margin: 0; }
+.plot__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-3); margin-bottom: 2px; }
+.plot__title { font-size: var(--fs-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-2); }
+.plot__range { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+.plot svg { width: 100%; display: block; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-2); }
+.plot__legend { display: flex; flex-wrap: wrap; gap: 4px var(--s-3); font-size: 11px; color: var(--text-2); margin-top: 6px; }
+.plot__legend span { display: inline-flex; align-items: center; gap: 5px; }
+.plot__swatch { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex: none; }
+.plot-flags {
+  display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4);
+  font-size: var(--fs-xs); color: var(--text-2);
+  padding-top: var(--s-3); margin-top: var(--s-3); border-top: 1px solid var(--line);
+}
+
+.factsheet { display: flex; flex-direction: column; gap: var(--s-3); }
+.factsheet .card__body { padding: var(--s-3) var(--s-4); }
+.factsheet__score { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+
+.viewer-skeleton { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: var(--s-3); }
+.viewer-skeleton__stage { aspect-ratio: 16 / 10; }
+.viewer-skeleton__cam { aspect-ratio: 1 / 1; }
+
+/* Wide layout: the fact sheet is much taller than the plots, so the plots column sticks
+   under the header instead of leaving a tall void beside the sheet as it is scrolled. */
+@media (min-width: 1101px) {
+  .run-body > :first-child { position: sticky; top: calc(var(--header-h) + var(--s-4)); }
+}
+@media (max-width: 1100px) {
+  .run-body { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .replay__stage, .viewer-skeleton { grid-template-columns: 1fr; }
+  .cams { grid-template-columns: 1fr 1fr; }
+  .page-header { flex-direction: column; gap: var(--s-3); }
+  .transport { flex-wrap: wrap; }
+}
+
+/* Run tab's Scene panel and the Replay tab's viewer column: the two camera streams sit under the
+   3D stage, side by side, instead of in a column to its right - the stage keeps the card's full
+   width and the cameras read as its footnotes. */
+.run-tab .replay__stage, .run-tab .viewer-skeleton { grid-template-columns: minmax(0, 1fr); }
+.run-tab .cams { grid-template-columns: 1fr 1fr; }
+.compare .replay__stage { grid-template-columns: minmax(0, 1fr); }
+.compare .cams { grid-template-columns: 1fr 1fr; }
+
+/* ------------------------------------------------------- the video stage (no scene bundle) */
+/* A run whose simulator compiles no scene (SimplerEnv) has its camera where a LIBERO run has
+   the 3D view: one column, the whole width, at the video's own 4:3 rather than the square
+   thumbnail crop the strip beside a stage uses.
+
+   Scoped under `.replay__stage--video`, which is the only place `CameraStreams` ever asks for
+   `layout="stage"`. Depending on source order alone (`.cams.cams--stage` written last) would
+   hold only for as long as nothing after it sets `.cams` columns, and would apply anywhere the
+   class turned up; the descendant selector both raises the specificity above the `.workspace`
+   / `.compare` / breakpoint overrides for good and keeps a compact viewer's camera strip out
+   of it. */
+.replay__stage--video, .viewer-skeleton--video { grid-template-columns: minmax(0, 1fr); }
+.replay__stage--video .cams.cams--stage { grid-template-columns: minmax(0, 1fr); }
+.replay__stage--video .cams--stage .cam video { aspect-ratio: 4 / 3; }
+@media (max-width: 900px) {
+  .replay__stage--video .cams.cams--stage { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Present to assistive tech, absent from the layout (table captions, labels). */
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --------------------------------------------------------------------------- the decision console */
+/* The RoboJEV tab is the Run tab's grid with two cards in the panel column instead of one, and a
+   stage that is being posed from a live stream rather than from a saved start state. Everything
+   below is those two differences; the layout, the cards, the chips and the sidebar are the Run
+   tab's own, unchanged.
+
+   No new colours and no new spacing: a bar is `--bg-2` on `--bg-1` with the chosen candidate in
+   `--accent`, which is the same accent the selected queue row and the selected run cell carry. */
+
+/* Two cards where `/run` has one. At 1500px the panel column is a sticky flex column bound by the
+   window (see `.run-tab__panel` above), so the stack has to be the flex child that shrinks - and
+   scroll inside itself rather than push the card past the bottom of the screen. */
+.robojev-panel { display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; min-height: 0; }
+.run-tab__panel > .robojev-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.decision-card { display: flex; flex-direction: column; min-height: 0; }
+.decision-card__body { display: flex; flex-direction: column; gap: var(--s-3); min-height: 0; }
+
+/* One question: what was asked, and every candidate under it. */
+.decision-group { margin-bottom: var(--s-3); }
+.decision-group:last-of-type { margin-bottom: 0; }
+.decision-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+}
+.decision-group__qid { color: var(--text-1); }
+
+/* One candidate. The fill is the probability and the two labels sit over it, so a 3% candidate is
+   still readable - a bar whose text lived inside the fill would vanish with it. A `button` and a
+   `span` are the same row on purpose: in an assisted session every candidate is a control, and in
+   a replay none is, and the reader should not have to re-learn the picture between the two. */
+.decision-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 4px var(--s-2);
+  margin-bottom: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  text-align: left;
+  appearance: none;
+}
+button.decision-bar { cursor: pointer; }
+button.decision-bar:hover { border-color: var(--accent); }
+button.decision-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The probability itself, as a width: `--p` is set inline, in 0..1. */
+.decision-bar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--p, 0) * 100%);
+  background: var(--bg-2);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.decision-bar__id, .decision-bar__p { position: relative; }
+.decision-bar__p { color: var(--text-3); }
+/* What the policy actually answered. The accent runs down the left edge rather than around the
+   whole row, as it does on a selected queue row: a bar is a line, not a boxed cell. */
+.decision-bar--chosen { box-shadow: inset 3px 0 0 var(--accent); color: var(--text-1); }
+.decision-bar--chosen .decision-bar__id { font-weight: 500; }
+/* Held for the next step: this is the answer the operator is forcing, which is a different claim
+   from "this is what the model chose" and so is a different mark. */
+.decision-bar[aria-pressed="true"] { border-color: var(--accent); color: var(--text-1); }
+
+/* The grounding/sub-stage/waypoint strip, above the groups (`DecisionPanel`'s `meta` prop) - one
+   line, no box of its own, so a v1 run's card looks exactly as it always has when there is none. */
+.decision-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0 0 var(--s-1);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+/* What the model read, one disclosure away. Closed by default: it is the question asked after the
+   bars, not before them. */
+.decision-state { font-size: var(--fs-xs); border-top: 1px solid var(--line); padding-top: var(--s-2); }
+.decision-state > summary { cursor: pointer; color: var(--text-2); }
+.decision-state pre {
+  margin: var(--s-2) 0 0;
+  padding: var(--s-2);
+  max-height: 240px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-2);
+  border-radius: var(--r-2);
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The live stage: the 3D view, and beside it the 128 square agentview the policy actually saw. */
+.live-scene { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: var(--s-3); align-items: start; }
+.live-scene__side { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+.live-scene__view { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-xs); }
+.live-scene__img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  /* The frame is 128 square and the box is wider: nearest-neighbour keeps it a picture of pixels
+     rather than a blur of them, which is what the model was actually given. */
+  image-rendering: pixelated;
+  object-fit: cover;
+}
+.live-scene__img--empty { background: var(--bg-2); }
+/* Under 900px the thumbnail has no column to sit in beside a stage this narrow. */
+@media (max-width: 900px) {
+  .live-scene { grid-template-columns: minmax(0, 1fr); }
+  .live-scene__side { flex-direction: row; align-items: center; gap: var(--s-3); }
+  .live-scene__view { width: 128px; flex: none; }
+}
+
+/* The `assisted` tick sits in the toolbar beside the temperature, so it needs the label's own
+   baseline rather than a `Field`'s stacked one. */
+.session-toggle { display: inline-flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); color: var(--text-2); }

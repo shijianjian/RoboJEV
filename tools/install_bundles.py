@@ -15,9 +15,9 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from robojev.recorder import POSTER_NAME, poster_time, write_poster   # noqa: E402
+from robojev.recorder import POSTER_NAME, QPOS_NAME, poster_time, write_poster   # noqa: E402
 
-REPLAYS = ROOT / "web" / "public" / "replays"
+REPLAYS = ROOT / "showcase" / "replays"
 
 #: The order the episode strip lists them in, and so which one is first. A bundle not named here
 #: goes to the end, alphabetically.
@@ -37,7 +37,7 @@ def main(argv: list[str]) -> int:
         if dst.exists():
             shutil.rmtree(dst)
         dst.mkdir(parents=True)
-        for name in ("episode.json", "agentview.mp4", "wrist.mp4", POSTER_NAME):
+        for name in ("episode.json", "agentview.mp4", "wrist.mp4", POSTER_NAME, QPOS_NAME):
             if (src / name).exists():
                 shutil.copy2(src / name, dst / name)
         # Derived here as well as at record time, so the strip has a picture for every bundle
@@ -59,6 +59,7 @@ def main(argv: list[str]) -> int:
             "task_index": bundle["task_index"],
             "init_state_index": bundle["init_state_index"],
             "suite": bundle["suite"],
+            "policy": bundle["policy"],
             "poster": poster,
         })
         size = sum(f.stat().st_size for f in dst.iterdir())

@@ -1,0 +1,4 @@
+{
+ "repository": "https://github.com/shijianjian/RoboJEV",
+ "runs": ["drawer", "bowl-plate", "cookie-box", "failure"]
+}

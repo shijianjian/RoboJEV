@@ -12,7 +12,10 @@
  */
 import type { Episode } from "./types";
 
-export const SUPPORTED_SCHEMA = 1;
+/** The newest bundle this page reads. 2 added the pose table and the 3D scene; a version-1
+ *  bundle is still read, and replays on its videos alone. */
+export const SUPPORTED_SCHEMA = 2;
+export const SUPPORTED_SCHEMAS: readonly number[] = [1, 2];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -51,10 +54,21 @@ export function validateEpisode(raw: unknown): { ok: true; episode: Episode } | 
   const problems: string[] = [];
   if (!isRecord(raw)) return { ok: false, problems: ["episode.json: not a JSON object"] };
 
-  if (raw.schema_version !== SUPPORTED_SCHEMA) {
+  if (!SUPPORTED_SCHEMAS.includes(raw.schema_version as number)) {
     problems.push(
-      `schema_version: this page reads ${SUPPORTED_SCHEMA}, the bundle says ${JSON.stringify(raw.schema_version)}`,
+      `schema_version: this page reads ${SUPPORTED_SCHEMAS.join(" and ")}, the bundle says ${JSON.stringify(raw.schema_version)}`,
     );
+  }
+  if (raw.qpos != null) {
+    const q = raw.qpos;
+    if (!isRecord(q) || typeof q.path !== "string" || typeof q.frames !== "number" || typeof q.nq !== "number") {
+      problems.push("qpos: expected {path, frames, nq, dtype}");
+    } else if (q.dtype !== undefined && q.dtype !== "<f4") {
+      problems.push(`qpos.dtype: this page reads little-endian float32, the bundle says ${JSON.stringify(q.dtype)}`);
+    }
+  }
+  if (raw.scene != null && (!isRecord(raw.scene) || typeof raw.scene.hash !== "string")) {
+    problems.push("scene: expected {hash, nq}");
   }
   for (const key of ["id", "instruction", "policy", "suite"] as const) {
     if (typeof raw[key] !== "string") problems.push(`${key}: expected a string`);

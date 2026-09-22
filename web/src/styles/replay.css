@@ -1,0 +1,160 @@
+/* ---------------------------------------------------------------------------
+   The replay page: the layout this app had before it took robopp's shell - the video large with
+   the wrist camera beside it, the transport with its decision ticks and the stage bar, the
+   state-text toggle, the details row, and the decisions as a two-column grid - in robopp's tokens.
+   Prefixed `rj-` because robopp's stylesheet already owns `.replay`, `.transport` and `.facts`.
+   --------------------------------------------------------------------------- */
+/* The command the robot was given, once, above the episode. */
+.rj-episode-title { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.rj-episode-title h1 { font-size: var(--fs-lg); font-weight: 600; min-width: 0; }
+
+/* --------------------------------------------------------------------------- transport */
+.rj-transport { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.rj-transport__buttons { display: flex; gap: var(--s-1); }
+.rj-transport__readout { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: var(--fs-xs); color: var(--text-2); }
+.rj-transport__hint { margin-left: auto; font-size: var(--fs-xs); color: var(--text-3); }
+.rj-speed { display: flex; gap: 2px; }
+.rj-speed .btn { min-height: 26px; padding: 2px 8px; font-size: var(--fs-xs); }
+
+/* The scrubber: one track, the decision points as ticks coloured by stage, the cursor in accent. */
+.rj-scrub { position: relative; height: 34px; margin: var(--s-2) 0 0; }
+.rj-scrub__track {
+  position: absolute; inset: 14px 0 auto 0; height: 6px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-pill);
+}
+.rj-scrub__stage { position: absolute; top: 15px; height: 4px; border-radius: var(--r-pill); opacity: 0.55; }
+.rj-scrub__tick {
+  position: absolute; top: 6px; width: 3px; height: 22px; padding: 0; margin-left: -1.5px;
+  border: 0; border-radius: 2px; cursor: pointer; background: currentColor; opacity: 0.75;
+}
+.rj-scrub__tick:hover { opacity: 1; transform: scaleY(1.18); }
+.rj-scrub__tick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rj-scrub__tick--current { opacity: 1; box-shadow: 0 0 0 1px var(--bg-0), 0 0 0 2px var(--accent); }
+.rj-scrub__cursor { position: absolute; top: 2px; bottom: 2px; width: 2px; margin-left: -1px; background: var(--accent); pointer-events: none; }
+.rj-scrub__input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer;
+}
+.rj-scrub__input:focus-visible + .rj-scrub__track { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* --------------------------------------------------------------------------- stage timeline */
+.rj-timeline {
+  position: relative; width: 100%; height: 20px; margin-top: var(--s-2);
+  border-radius: var(--r-1); overflow: hidden; background: var(--bg-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rj-timeline__seg {
+  position: absolute; top: 0; bottom: 0;
+  display: flex; align-items: center; justify-content: center; min-width: 0; padding: 0 2px;
+  border: 0; box-shadow: inset -1px 0 0 var(--bg-1); cursor: pointer;
+  font: inherit; font-size: 11px; letter-spacing: 0.02em; color: #0a0e17; font-weight: 600;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.rj-timeline__seg--settle { cursor: default; background: var(--bg-3); }
+.rj-timeline__seg[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* --------------------------------------------------------------------------- decision panel */
+.rj-decision__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); font-size: var(--fs-xs); color: var(--text-2); margin-bottom: var(--s-3); }
+/* Two columns where there is room for two, so each axis is one row — its direction beside its own
+   step size — and the ten questions are five rows rather than ten stacked boxes. It collapses to
+   one column below ~500px of card, which is the phone. */
+.rj-decision__grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0 var(--s-3); align-items: start;
+}
+/* Pairs - an axis's direction beside its own step size - so the columns are a multiple of two. */
+@media (max-width: 1199px) { .rj-decision__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .rj-decision__grid { grid-template-columns: minmax(0, 1fr); } }
+.rj-decision__group { margin-bottom: var(--s-2); border-radius: var(--r-2); padding: 2px; }
+.rj-decision__group:last-of-type { margin-bottom: 0; }
+.rj-decision__group--hot { background: #ffffff08; box-shadow: inset 0 0 0 1px var(--line-bright); }
+.rj-decision__head { display: flex; align-items: baseline; gap: var(--s-2); flex-wrap: wrap; margin: 0 0 var(--s-1); font-size: var(--fs-xs); font-weight: 500; }
+.rj-decision__qid { font-family: var(--font-mono); color: var(--text-1); }
+.rj-decision__ask { color: var(--text-3); font-weight: 400; }
+
+.rj-bar {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--s-2);
+  width: 100%; padding: 2px var(--s-2); margin-bottom: 2px;
+  border: 1px solid var(--line); border-radius: var(--r-2);
+  background: var(--bg-1); color: var(--text-2); font-size: var(--fs-xs); text-align: left;
+}
+.rj-bar__fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); background: var(--bg-3); border-radius: inherit; pointer-events: none; }
+.rj-bar__id, .rj-bar__p { position: relative; }
+.rj-bar__id { font-family: var(--font-mono); }
+.rj-bar__p { color: var(--text-3); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.rj-bar--chosen { box-shadow: inset 3px 0 0 var(--accent); color: var(--text-1); }
+.rj-bar--chosen .rj-bar__id { font-weight: 600; }
+.rj-bar--refused { box-shadow: inset 3px 0 0 var(--bad); }
+.rj-bar--refused .rj-bar__id { color: var(--bad); text-decoration: line-through; }
+
+/* Live, a bar is a button: clicking one holds that answer for the next decision. The held one is
+   outlined rather than filled, because the fill is the probability and must stay readable. */
+.rj-bar--live { cursor: pointer; font: inherit; font-size: var(--fs-xs); }
+.rj-bar--live:hover { border-color: var(--line-bright); color: var(--text-1); }
+.rj-bar--live:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Outlined, not labelled: the row's own `next: <id>` chip says which answer is held, and a word
+   inside the bar would sit next to a candidate called `hold` and read as one. */
+.rj-bar--armed { border-color: var(--accent); color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent); }
+.rj-bar--armed .rj-bar__id { font-weight: 600; }
+
+/* --------------------------------------------------------------------------- state text */
+.rj-statetext {
+  margin: 0; padding: var(--s-3);
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-2);
+  font-family: var(--font-mono); font-size: var(--fs-xs); line-height: 1.55;
+  color: var(--text-2);
+  max-height: 70vh; overflow: auto; overscroll-behavior: contain;
+  white-space: pre-wrap; word-break: break-word;
+}
+.rj-statetext__line { display: block; padding: 0 4px; border-radius: 3px; border-left: 2px solid transparent; }
+.rj-statetext__line--hot { background: var(--accent-soft); border-left-color: var(--accent); color: var(--text-1); }
+.rj-statetext__line--chosen { color: var(--text-1); }
+
+/* --------------------------------------------------------------------------- details row */
+/* Labels and values, one line each where there is room. No sentences: the sentence is in the
+   `title`, for whoever hovers. */
+.rj-details {
+  display: flex; flex-wrap: wrap; gap: var(--s-1) var(--s-4);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line); border-radius: var(--r-2); background: var(--bg-1);
+  font-size: var(--fs-xs);
+}
+.rj-fact { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.rj-fact__label { color: var(--text-3); }
+.rj-fact__value { color: var(--text-1); }
+.rj-fact__ok { color: var(--ok); }
+.rj-fact__bad { color: var(--bad); }
+
+/* The state text lives behind this button, closed: the first screen is the video and the bars. */
+.rj-statetoggle { display: flex; align-items: center; gap: var(--s-2); }
+.rj-statetoggle .btn { font-size: var(--fs-xs); min-height: 26px; padding: 3px 10px; }
+
+.rj-speed .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.rj-transport__hint kbd {
+  font-family: var(--font-mono); font-size: 10px; padding: 0 3px; color: var(--text-2);
+  border: 1px solid var(--line-bright); border-bottom-width: 2px; border-radius: 3px; background: var(--bg-2);
+}
+
+/* --------------------------------------------------------------------------- the Runs layout */
+/* The 3D scene is the main view; the two cameras are stacked on its right at one fixed width,
+   sized so the pair is as tall as the scene; the controls are one block directly under the scene,
+   flush with its left edge. */
+.rj-page { --rj-stage-h: min(62vh, 640px); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.rj-view {
+  --rj-cam: max(160px, calc((var(--rj-stage-h) - 60px) / 2));
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--rj-cam); gap: var(--s-3); align-items: start;
+}
+.rj-view__main { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.rj-scene .scene { aspect-ratio: auto; height: var(--rj-stage-h); }
+.rj-view__cams { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.rj-view__cams .cam video { width: 100%; height: auto; aspect-ratio: 1 / 1; display: block; background: var(--bg-canvas); }
+.rj-cam-empty { aspect-ratio: 1 / 1; }
+.rj-controls { min-width: 0; }
+.rj-under { display: flex; align-items: flex-start; gap: var(--s-3); flex-wrap: wrap; }
+.rj-under .rj-details { flex: 1 1 320px; }
+@media (max-width: 1199px) {
+  .rj-page { --rj-stage-h: min(56vh, 520px); }
+  .rj-view { grid-template-columns: minmax(0, 1fr); }
+  .rj-view__cams { flex-direction: row; }
+  .rj-view__cams .cam { flex: 0 1 220px; min-width: 0; }
+}
+.rj-autoplay[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }

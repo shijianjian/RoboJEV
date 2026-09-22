@@ -10,15 +10,27 @@
 /** The episode that opens when the URL names none: the drawer, which has the most to look at. */
 export const DEFAULT_EPISODE = "drawer";
 
-/** The id in `hash`, or null when it names none. */
+/** The id in `hash`, or null when it names none. A `?t=<frame>` after it is the playhead. */
 export function routeOf(hash: string): string | null {
-  const m = /^#\/?(?:replay\/)?([\w.-]+)\/?$/.exec(hash);
+  const m = /^#\/?(?:replay\/)?([\w.-]+)\/?(?:\?.*)?$/.exec(hash);
   return m === null ? null : m[1];
 }
 
-/** The hash for an episode id — one place, so a link and a `location.hash` cannot disagree. */
-export function hashFor(id: string): string {
-  return `#/${id}`;
+/** The playhead a hash names (`#/drawer?t=72`), or null. robopp's run page keeps it as `?t=`;
+ *  here the query string lives inside the hash, because Pages serves one file. */
+export function frameOf(hash: string): number | null {
+  const q = hash.indexOf("?");
+  if (q === -1) return null;
+  const raw = new URLSearchParams(hash.slice(q + 1)).get("t");
+  if (raw === null || raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+/** The hash for an episode id — one place, so a link and a `location.hash` cannot disagree.
+ *  Frame 0 is the address with no `?t=` at all, as on robopp's run page. */
+export function hashFor(id: string, frame = 0): string {
+  return frame > 0 ? `#/${id}?t=${frame}` : `#/${id}`;
 }
 
 /**

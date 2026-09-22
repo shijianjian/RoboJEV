@@ -1,51 +1,52 @@
 /**
- * The whole site is one page: an episode, playing, and a strip to switch between them.
+ * Two pages behind one sidebar: **Runs**, the replay page (a recorded episode: its 3D scene, its
+ * videos and its decisions), and **Dataset**, the inference page (robopp's RoboJEV tab: pick a
+ * task and a start state and drive a policy through `robojev console`).
  *
  * Routing is the hash, because GitHub Pages cannot rewrite `/RoboJEV/drawer` back to
- * `index.html` and a deep link that 404s is worse than a `#`. `#/<id>` is the address of an
- * episode; `#/replay/<id>`, which is what the first version of this site handed out, still
- * resolves; and an empty hash is the drawer — the episode with the most to look at.
- *
- * Switching does not reload: the hash changes, the episode is fetched (and thereafter cached by
- * `ReplaySource`), and the `<video>` is rebuilt by its key.
- *
- * **The console is one more item in the strip**, and only when there is one (`makeLive`, which is
- * null unless `?live=`, the global `robojev console` injects, or `VITE_LIVE_URL` says otherwise).
- * A GitHub Pages visit therefore builds no socket, makes no probe and shows no live controls: the
- * static deployment is exactly the page it was before the console existed. A page a console *is*
- * serving opens on `#/live`, because that is the thing it is a console for, and the four recorded
- * bundles are still one click away in the same strip.
+ * `index.html`: `#/dataset` is the inference page, `#/<id>` an episode (`?t=<frame>` opens it at a
+ * frame), and an empty hash opens the drawer episode. The GitHub Pages build (`VITE_SITE=pages`)
+ * has no Dataset tab at all - it needs a console - and sends `#/dataset` to the Runs tab; a local
+ * build keeps both, and without a console its Dataset tab says one is needed.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { EpisodeStrip } from "./components/EpisodeStrip";
-import { Live } from "./components/Live";
-import { Replay } from "./components/Replay";
-import { Chip } from "./components/ui";
-import { EMPTY_LIVE, LIVE_ID, liveEntry, type LiveState } from "./data/live";
-import { DEFAULT_EPISODE, episodeFor, hashFor } from "./data/route";
-import { makeLive, makeSource, ReplaySource } from "./data/source";
-import type { Episode, EpisodeIndexEntry } from "./data/types";
+import { EMPTY_LIVE, LIVE_ID, type LiveState } from "./data/live";
+import { DEFAULT_EPISODE, episodeFor, frameOf, hashFor, routeOf } from "./data/route";
+import { shortLabel } from "./data/lookup";
+import { makeLive, ReplaySource } from "./data/source";
+import type { CatalogueSuite, Episode, EpisodeIndexEntry } from "./data/types";
+import { Replay } from "./replay/Replay";
+import { Inference, type SceneChoice } from "./robojev/Inference";
+import { DEFAULT_INIT_STATES, policyName, suiteLabel } from "./robojev/labels";
+import { Sidebar, type RailRun } from "./robojev/Sidebar";
+import { Callout } from "./ui/Callout";
+import { Shell } from "./ui/Shell";
+import showcase from "../showcase.json";
 
-const source = makeSource();
+const source = new ReplaySource();
 const live = makeLive();
 
-function Failed({ what, error }: { what: string; error: unknown }) {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    <div className="notice notice--bad" data-testid="load-error">
-      <b>{what} could not be loaded.</b>
-      <pre>{message}</pre>
-    </div>
-  );
+/** The GitHub Pages build: the Runs tab and nothing that needs a console. Decided when the site is
+ *  built (`npm run build:pages`), never by looking for a console. */
+const PAGES = import.meta.env.VITE_SITE === "pages";
+
+/** The inference page's address. `#/live`, what the console's page used to open on, still works. */
+const DATASET = "dataset";
+const DATASET_ALIASES = [DATASET, LIVE_ID];
+
+/** Below this the sidebar is a drawer over the page: robopp's `NARROW`. */
+const NARROW = "(max-width: 999px)";
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 export function App() {
   const [hash, setHash] = useState(() => (typeof location === "undefined" ? "" : location.hash));
   const [entries, setEntries] = useState<EpisodeIndexEntry[] | null>(null);
   const [listError, setListError] = useState<unknown>(null);
-  const [episode, setEpisode] = useState<Episode | null>(null);
-  const [episodeError, setEpisodeError] = useState<unknown>(null);
-  const [liveState, setLiveState] = useState<LiveState>(EMPTY_LIVE);
+  const [state, setState] = useState<LiveState>(EMPTY_LIVE);
+  const [choice, setChoice] = useState<SceneChoice>({ suite: "libero_spatial", task: 0, init: 0 });
 
   useEffect(() => {
     const onHash = () => setHash(location.hash);
@@ -53,113 +54,198 @@ export function App() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // The task catalogue: what the Dataset tab lists, thumbnails and start states included. Served
+  // from the repository's `data/` by the console, and copied into a local build.
+  const [catalogue, setCatalogue] = useState<CatalogueSuite[]>([]);
   useEffect(() => {
-    let alive = true;
-    source.list().then(
-      (list) => { if (alive) setEntries(list); },
-      (err) => { if (alive) setListError(err); },
-    );
-    return () => { alive = false; };
+    if (PAGES) return;
+    fetch("catalogue/index.json", { cache: "no-cache" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: unknown) => { if (Array.isArray(rows)) setCatalogue(rows as CatalogueSuite[]); })
+      .catch(() => {});
   }, []);
 
-  // The console: one socket for the life of the page, and one request for the task sentences as
-  // soon as it says hello. Asking for them lazily is why the console comes up instantly — reading
-  // LIBERO's task definitions costs seconds, and it costs them once.
+  const readIndex = useCallback(() => {
+    source.refresh();
+    source.list().then(setEntries, setListError);
+  }, []);
+  useEffect(readIndex, [readIndex]);
+
   useEffect(() => {
     if (live === null) return;
-    let asked = "";
-    const off = live.subscribeState((next) => {
-      setLiveState(next);
-      const suite = next.config?.default.suite ?? "";
-      if (next.connection === "open" && next.tasks === null && suite !== "" && asked !== suite) {
-        asked = suite;
-        live.askTasks(suite);
-      }
-    });
+    const off = live.subscribeState(setState);
     live.connect();
     return () => { off(); live.close(); };
   }, []);
 
-  const strip = useMemo(
-    () => (live === null ? (entries ?? []) : [liveEntry(liveState), ...(entries ?? [])]),
-    [entries, liveState],
-  );
-  const known = useMemo(() => strip.map((e) => e.id), [strip]);
-  const id = episodeFor(hash, known, live === null ? DEFAULT_EPISODE : LIVE_ID);
-  const showingLive = live !== null && id === LIVE_ID;
-
+  // The console's own defaults, once; and a new episode puts the sidebar on its own scene.
+  const [seeded, setSeeded] = useState(false);
+  if (!seeded && state.config !== null) {
+    setSeeded(true);
+    setChoice({ suite: state.config.default.suite, task: state.config.default.task, init: state.config.default.init });
+  }
+  const [adopted, setAdopted] = useState<string | null>(null);
+  if (state.header !== null && adopted !== state.header.id) {
+    setAdopted(state.header.id);
+    setChoice({ suite: state.header.suite, task: state.header.task_index, init: state.header.init_state_index });
+  }
+  // The task sentences, for whichever suite the sidebar is on.
+  const [asked, setAsked] = useState("");
   useEffect(() => {
-    if (showingLive) return;
-    let alive = true;
-    setEpisode(null);
-    setEpisodeError(null);
-    source.load(id).then(
-      (ep) => { if (alive) setEpisode(ep); },
-      (err) => { if (alive) setEpisodeError(err); },
-    );
-    return () => { alive = false; };
-  }, [id, showingLive]);
+    if (live === null || state.connection !== "open" || asked === choice.suite) return;
+    setAsked(choice.suite);
+    live.askTasks(choice.suite);
+  }, [state.connection, choice.suite, asked]);
 
-  const pick = useCallback((next: string) => { location.hash = hashFor(next); }, []);
-
-  // ↑/↓ walk the strip, 1–9 jump straight to one. The replay owns space and ←/→.
+  const known = useMemo(() => [...(PAGES ? [] : DATASET_ALIASES), ...(entries ?? []).map((e) => e.id)], [entries]);
+  const route = episodeFor(hash, known, DEFAULT_EPISODE);
+  // On Pages an address naming the Dataset tab is rewritten to the run it falls back to.
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target !== null && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
-      if (strip.length === 0) return;
-      const at = Math.max(0, strip.findIndex((entry) => entry.id === id));
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        e.preventDefault();
-        const delta = e.key === "ArrowDown" ? 1 : -1;
-        pick(strip[(at + delta + strip.length) % strip.length].id);
-      } else if (/^[1-9]$/.test(e.key)) {
-        const wanted = strip[Number(e.key) - 1];
-        if (wanted !== undefined) { e.preventDefault(); pick(wanted.id); }
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [strip, id, pick]);
+    const named = routeOf(hash);
+    if (!PAGES || named === null || !DATASET_ALIASES.includes(named)) return;
+    const to = hashFor(DEFAULT_EPISODE);
+    history.replaceState(null, "", `${location.pathname}${location.search}${to}`);
+    setHash(to);
+  }, [hash]);
+  const tab = DATASET_ALIASES.includes(route) ? "dataset" : "runs";
+  const [lastRun, setLastRun] = useState(DEFAULT_EPISODE);
+  if (tab === "runs" && lastRun !== route) setLastRun(route);
 
-  const mediaUrl = useCallback(
-    (path: string) => (source instanceof ReplaySource ? source.mediaUrl(id, path) : path),
-    [id],
-  );
-  const posterUrl = useCallback(
-    (entry: EpisodeIndexEntry) => (
-      source instanceof ReplaySource && entry.poster != null
-        ? source.mediaUrl(entry.id, entry.poster)
-        : null
-    ),
-    [],
-  );
+  const [sideOpen, setSideOpen] = useState(true);
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW);
+    const apply = () => setSideOpen(!mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // ---------------------------------------------------------------- the sidebar's two lists
+
+  const list = useMemo(() => entries ?? [], [entries]);
+  const catalogued = catalogue.find((c) => c.suite === choice.suite) ?? null;
+  const tasks = useMemo(() => {
+    if (catalogued !== null) {
+      return catalogued.tasks.map((t) => ({
+        taskIndex: t.task_index, instruction: t.instruction,
+        thumbnail: `catalogue/${t.suite}/${t.task_index}/${t.thumbnail ?? "thumb.png"}`,
+      }));
+    }
+    const byTask = new Map<number, EpisodeIndexEntry>();
+    for (const e of list) if (e.suite === choice.suite && !byTask.has(e.task_index)) byTask.set(e.task_index, e);
+    const rows = state.tasks ?? Array.from({ length: 10 }, (_, i) => ({
+      index: i, instruction: byTask.get(i)?.instruction ?? null, init_states: DEFAULT_INIT_STATES,
+    }));
+    return rows.map((t) => {
+      const e = byTask.get(t.index);
+      return { taskIndex: t.index, instruction: t.instruction, thumbnail: e?.poster != null ? source.mediaUrl(e.id, e.poster) : null };
+    });
+  }, [catalogued, state.tasks, list, choice.suite]);
+  // The datasets: the catalogue's suites with their real task counts; without a catalogue, the
+  // console's suites or the suites the runs on disk are from.
+  const families = [{
+    simulator: "libero",
+    heading: "LIBERO",
+    suites: catalogue.length > 0
+      ? catalogue.map((c) => ({ id: c.suite, displayName: suiteLabel(c.suite), nTasks: c.tasks.length }))
+      : (state.config?.suites ?? [...new Set([choice.suite, ...list.map((e) => e.suite)])]).map((id) => ({
+          id, displayName: suiteLabel(id), nTasks: id === choice.suite ? tasks.length : 10,
+        })),
+  }];
+
+  const runs: RailRun[] = useMemo(() => {
+    // Recorded runs only: a live episode is the Dataset tab's, and is a run once it is saved.
+    const out: RailRun[] = [];
+    for (const e of list) {
+      out.push({
+        id: e.id, status: "done", policyLabel: shortLabel(e.instruction), policy: policyName(e.policy),
+        initStateIndex: e.init_state_index,
+        success: e.success, steps: e.decisions, family: "decision", href: hashFor(e.id),
+        suite: e.suite, suiteLabel: suiteLabel(e.suite), taskIndex: e.task_index,
+      });
+    }
+    return out;
+  }, [list]);
+
+  const go = (target: string) => { location.hash = target; };
+  const onSelectRun = (id: string) => go(hashFor(id));
+  const onGoToScene = (suite: string, task: number, init: number) => {
+    setChoice({ suite, task, init });
+    go(`#/${DATASET}`);
+  };
+
 
   return (
-    <div className="shell">
-      <header className="masthead">
-        <span className="masthead__name"><a href="#/">RoboJEV</a></span>
-        <span className="masthead__right">
-          <Chip mono testId="source-kind">
-            {live === null ? source.kind : `console · ${liveState.connection}`}
-          </Chip>
-        </span>
-      </header>
-
-      {listError !== null && <Failed what="The episode index" error={listError} />}
-      {strip.length > 0 && (
-        <EpisodeStrip entries={strip} current={id} posterUrl={posterUrl} onPick={pick} />
+    <Shell repository={showcase.repository}>
+      {listError !== null && (
+        <Callout tone="bad" title="The episode index could not be loaded" testId="load-error">{message(listError)}</Callout>
       )}
-
-      {showingLive && live !== null ? (
-        <Live source={live} state={liveState} />
-      ) : episodeError !== null ? (
-        <Failed what={`Bundle “${id}”`} error={episodeError} />
-      ) : episode === null ? (
-        <p className="muted" data-testid="loading">Loading…</p>
-      ) : (
-        <Replay episode={episode} mediaUrl={mediaUrl} />
-      )}
-    </div>
+      <div className={`run-tab run-tab--app run-tab--${tab === "runs" ? "replay" : "dataset"}`}>
+        <details className="run-tab__side" open={sideOpen} onToggle={(e) => setSideOpen(e.currentTarget.open)} data-testid="run-side">
+          <summary className="run-tab__side-summary">{tab === "dataset" ? "Dataset" : "Runs"}</summary>
+          <Sidebar
+            tab={tab}
+            tabs={PAGES ? ["runs"] : ["runs", "dataset"]}
+            datasetHref={`#/${DATASET}`}
+            runsHref={hashFor(lastRun)}
+            families={families}
+            suite={choice.suite}
+            suiteLabel={suiteLabel(choice.suite)}
+            tasks={tasks}
+            taskIndex={choice.task}
+            onSuite={(suite) => setChoice({ suite, task: 0, init: 0 })}
+            // Without a console there is no start-state picker, so a task opens on the start state
+            // its recording began from - the one start state this page can show.
+            onTask={(task) => setChoice({
+              ...choice, task,
+              init: live === null ? list.find((e) => e.suite === choice.suite && e.task_index === task)?.init_state_index ?? 0 : 0,
+            })}
+            runs={runs}
+            selectedRun={tab === "runs" ? route : null}
+            onSelectRun={onSelectRun}
+            onGoToScene={onGoToScene}
+          />
+        </details>
+        {tab === "dataset" ? (
+          <Inference
+            live={live}
+            state={state}
+            entries={list}
+            source={source}
+            choice={choice}
+            onChoice={setChoice}
+            instruction={tasks.find((t) => t.taskIndex === choice.task)?.instruction ?? null}
+            task={catalogued?.tasks.find((t) => t.task_index === choice.task) ?? null}
+            onSaved={readIndex}
+            // Newest first: a run the console has just saved goes to the top.
+            taskRuns={list.filter((e) => e.suite === choice.suite && e.task_index === choice.task)
+              .sort((x, y) => Number(y.id.startsWith("live-")) - Number(x.id.startsWith("live-")) || (x.id.startsWith("live-") ? y.id.localeCompare(x.id) : 0))
+              .map((e) => ({
+              id: e.id, label: shortLabel(e.instruction), success: e.success,
+              poster: e.poster != null ? source.mediaUrl(e.id, e.poster) : null,
+            }))}
+          />
+        ) : (
+          <div className="run-tab__main">
+            {/* Keyed by the frame too: a link to another frame of the same episode is a new page. */}
+            <RunPage key={`${route}@${frameOf(hash) ?? 0}`} id={route} frame={frameOf(hash) ?? 0} />
+          </div>
+        )}
+      </div>
+    </Shell>
   );
+}
+
+function RunPage({ id, frame }: { id: string; frame: number }) {
+  const [episode, setEpisode] = useState<Episode | null>(null);
+  const [error, setError] = useState<unknown>(null);
+  useEffect(() => {
+    let alive = true;
+    source.load(id).then((ep) => { if (alive) setEpisode(ep); }, (err) => { if (alive) setError(err); });
+    return () => { alive = false; };
+  }, [id]);
+  const files = useMemo(() => (episode === null ? null : source.files(episode)), [episode]);
+  if (error !== null) return <Callout tone="bad" title={`Could not load ${id}`} testId="load-error">{message(error)}</Callout>;
+  if (episode === null || files === null) return <p className="u-dim" data-testid="loading">Loading…</p>;
+  return <Replay episode={episode} files={files} initialTime={frame / episode.control_rate} />;
 }

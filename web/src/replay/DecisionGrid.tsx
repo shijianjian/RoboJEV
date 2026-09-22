@@ -10,35 +10,29 @@
  * Hovering (or focusing) a question tells the caller which question is "hot"; the state text, when
  * it is open, lights the lines that answer it. That link is the question set's own
  * (`data/stateText.ts`), not an attention map.
- *
- * **Live, a bar is also a control.** Given `onOverride`, every candidate becomes a button: clicking
- * one arms it for the *next* decision, which the console then executes and records with the
- * `overridden` flag the bundle schema already carries. What is drawn as armed is `armed`, which is
- * the console's own answer and not this page's memory of the click — a bar lit for an override the
- * server refused is the worst thing this panel could draw.
  */
 import type { Decision } from "../data/types";
 import { PANEL_LAYOUT, QUESTION_BY_ID, orderQuestions } from "../data/questions";
 import { fmtProbability, refusedCandidate } from "../data/lookup";
-import { Chip } from "./ui";
+import { Chip } from "../ui/Chip";
 
 function Bar({ qid, id, p, chosen, refused, armed = false, onOverride }: {
   qid: string; id: string; p: number; chosen: boolean; refused: boolean;
   armed?: boolean;
   onOverride?: (qid: string, candidate: string) => void;
 }) {
-  const cls = ["bar", chosen ? "bar--chosen" : "", refused ? "bar--refused" : "",
-               armed ? "bar--armed" : "", onOverride !== undefined ? "bar--live" : ""]
+  const cls = ["rj-bar", chosen ? "rj-bar--chosen" : "", refused ? "rj-bar--refused" : "",
+               armed ? "rj-bar--armed" : "", onOverride !== undefined ? "rj-bar--live" : ""]
     .filter(Boolean).join(" ");
   const inside = (
     <>
-      <span className="bar__fill" aria-hidden style={{ ["--p" as string]: Math.max(p, 0) }} />
-      <span className="sr">{qid}: </span>
-      <span className="bar__id">{id === "-" ? "−" : id}</span>
-      {chosen && <span className="sr">, chosen</span>}
-      {armed && <span className="sr">, held for the next decision</span>}
-      {refused && <span className="sr">, asked for by the model and refused by the grip guard</span>}
-      <span className="bar__p">{fmtProbability(p)}</span>
+      <span className="rj-bar__fill" aria-hidden style={{ ["--p" as string]: Math.max(p, 0) }} />
+      <span className="u-sr">{qid}: </span>
+      <span className="rj-bar__id">{id === "-" ? "−" : id}</span>
+      {chosen && <span className="u-sr">, chosen</span>}
+      {armed && <span className="u-sr">, held for the next decision</span>}
+      {refused && <span className="u-sr">, asked for by the model and refused by the grip guard</span>}
+      <span className="rj-bar__p">{fmtProbability(p)}</span>
     </>
   );
   if (onOverride === undefined) {
@@ -64,7 +58,7 @@ function Bar({ qid, id, p, chosen, refused, armed = false, onOverride }: {
   );
 }
 
-export function DecisionPanel({ decision, hot, onHot, armed, onOverride }: {
+export function DecisionGrid({ decision, hot, onHot, armed, onOverride }: {
   decision: Decision;
   /** The question the reader is pointing at, or null. */
   hot: string | null;
@@ -80,22 +74,22 @@ export function DecisionPanel({ decision, hot, onHot, armed, onOverride }: {
 
   return (
     <div data-testid="decision-panel">
-      <p className="decision__meta" data-testid="decision-meta">
+      <p className="rj-decision__meta" data-testid="decision-meta">
         <span>
-          decision <b className="num">{decision.index + 1}</b>
-          <span className="dim"> · </span>
-          <span className="num">{decision.t.toFixed(2)} s</span>
+          decision <b className="u-num">{decision.index + 1}</b>
+          <span className="u-dim"> · </span>
+          <span className="u-num">{decision.t.toFixed(2)} s</span>
         </span>
         {decision.subgoal !== null && (
           <Chip testId="decision-stage">
             {decision.subgoal}
-            {decision.substage !== null && <span className="dim"> {decision.substage}</span>}
+            {decision.substage !== null && <span className="u-dim"> {decision.substage}</span>}
           </Chip>
         )}
         {latch.refused && <Chip tone="failure" testId="decision-refused">grip refused</Chip>}
       </p>
 
-      <div className="decision__grid" data-testid="decision-groups">
+      <div className="rj-decision__grid" data-testid="decision-groups">
         {qids.map((qid) => {
           const group = decision.questions[qid];
           const spec = QUESTION_BY_ID[qid];
@@ -103,7 +97,7 @@ export function DecisionPanel({ decision, hot, onHot, armed, onOverride }: {
           return (
             <section
               key={qid}
-              className={`decision__group${isHot ? " decision__group--hot" : ""}`}
+              className={`rj-decision__group${isHot ? " rj-decision__group--hot" : ""}`}
               data-testid={`decision-${qid}`}
               title={spec === undefined ? qid : `${spec.asks} ${spec.means}`}
               onMouseEnter={() => onHot(qid)}
@@ -112,8 +106,8 @@ export function DecisionPanel({ decision, hot, onHot, armed, onOverride }: {
               onBlur={() => onHot(null)}
               tabIndex={0}
             >
-              <h3 className="decision__head">
-                <span className="decision__qid">{qid}</span>
+              <h3 className="rj-decision__head">
+                <span className="rj-decision__qid">{qid}</span>
                 {group.overridden && (
                   <Chip tone="accent" testId={`overridden-${qid}`}>overridden</Chip>
                 )}

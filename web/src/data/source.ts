@@ -16,6 +16,7 @@
 import { LiveSource } from "./live";
 import { validateEpisode } from "./schema";
 import type { Decision, Episode, EpisodeIndexEntry } from "./types";
+import type { BundleFiles } from "../viewer/files";
 
 export { LiveSource } from "./live";
 
@@ -54,6 +55,35 @@ export class ReplaySource implements EpisodeSource {
   /** The directory a bundle's media sits in, for the `<video src>`. */
   mediaUrl(id: string, path: string): string {
     return `${this.root}/${id}/${path}`;
+  }
+
+  /**
+   * Every file the viewer reads for one bundle, as absolute URLs: the scene is fetched from the
+   * MuJoCo worker, and a worker resolves a relative URL against its own script, not the page.
+   * The scene is `scenes/<hash>/` at the site's root: robopp's compiled bundle, served from the
+   * repository's `data/scenes` (a build copies the ones its runs use).
+   */
+  files(episode: Episode): BundleFiles {
+    const abs = (path: string) => new URL(path, typeof document === "undefined" ? "http://localhost/" : document.baseURI).href;
+    const base = `${this.root}/${episode.id}/`;
+    const media: Record<string, string> = {};
+    for (const [camera, track] of Object.entries(episode.media)) {
+      if (track !== undefined) media[camera] = abs(base + track.path);
+    }
+    return {
+      media,
+      poster: episode.poster != null ? abs(base + episode.poster) : null,
+      qpos: episode.qpos != null ? { url: abs(base + episode.qpos.path), spec: episode.qpos } : null,
+      scene: episode.scene != null
+        ? { xml: abs(`scenes/${episode.scene.hash}/scene.xml`), assets_base: abs(`scenes/${episode.scene.hash}/assets/`) }
+        : null,
+      episodeJson: abs(base + "episode.json"),
+    };
+  }
+
+  /** Forget what has been read, so a bundle saved by the console is read fresh. */
+  refresh(): void {
+    this.cache.clear();
   }
 
   async list(): Promise<EpisodeIndexEntry[]> {

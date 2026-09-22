@@ -23,23 +23,36 @@ Live demo (replays, no backend): <https://shijianjian.github.io/RoboJEV/>
 ```bash
 pip install -e .                       # numpy only; add [libero] for the simulator, [model] for torch
 robojev run --task 0 --init 0 --policy expert       # one closed-loop episode, prints success
-robojev record --task 0 --init 0 --policy expert --out web/public/replays/demo
-cd web && npm ci && npm run build      # the front end
-robojev console                        # http://127.0.0.1:8765/ — replays, and one live episode
+robojev record --task 0 --init 0 --policy expert --out runs/demo
+cd web && npm ci && npm run build      # the front end (npm run build:pages is the GitHub Pages one)
+robojev console                        # http://127.0.0.1:8765/
 ```
 
-`run`, `record` and `console` need `robojev[libero]` and `MUJOCO_GL=egl`. The web app needs
-neither the simulator nor any weights — it reads the episode bundles in `web/public/replays/`.
+`run`, `record`, `catalogue`, `scene` and `console` need `robojev[libero]` and `MUJOCO_GL=egl`.
+The web app needs neither the simulator nor any weights. Its sidebar has two tabs: **Runs**
+replays a recorded episode - the 3D MuJoCo scene posed from the bundle's `qpos.bin`, the two
+cameras, the decision ticks over the stage bar, and the ten answers - and is where the site opens;
+**Dataset** lists the task catalogue and drives the console. GitHub Pages has the Runs tab only.
+The 3D view compiles robopp's scene bundles with MuJoCo's WebAssembly build, fetched from jsDelivr
+as robopp does.
+
+Data lives in three places in a checkout: `showcase/` (tracked: the runs `web/showcase.json` names,
+the scenes they use and their tasks' catalogue entries - what Pages publishes), `data/` (not
+tracked: the full catalogue and compiled scenes of the five LIBERO suites) and `runs/` (not
+tracked: console saves and recordings). The app and the console read all three, then
+`$ROBOJEV_HOME`.
 
 ## Live console
 
-`robojev console` serves the built front end and adds the half a static page cannot have: pick a
-task, a start state and a policy, press **Step** for one decision or **Run** for the rest, and
-watch the two camera streams, the paragraph the model read and the ten answers as they are made.
-Clicking a candidate bar **holds** that answer for the next decision — the console executes it and
-records it as overridden. **Save** writes the episode into `web/public/replays/` as an ordinary
-bundle, so it is in the strip on the next refresh. One episode at a time; the protocol is
-[web/PROTOCOL.md](web/PROTOCOL.md) and the server adds no dependency beyond the standard library.
+`robojev console` serves the built front end and drives one episode at a time. On the Dataset tab,
+pick a task (its scene is shown at once, posed from the catalogue's start state) and weights, and
+press **Start**: the episode runs to its end with the 3D scene, both camera streams and the ten
+answers updating live, and is saved into `runs/` as a run when it ends or is stopped. Clicking a
+candidate bar while it runs holds that answer for the next decision, recorded as an override. The
+page offers checkpoints only (found under `$ROBOJEV_HOME/checkpoints` or given with `--checkpoint`,
+and the hosted Jev when `$JEV_API_KEY` is set); `--dev-expert` adds the scripted expert for
+development. The protocol is [web/PROTOCOL.md](web/PROTOCOL.md) and the server adds no dependency
+beyond the standard library.
 
 ## Repository
 
@@ -48,9 +61,11 @@ bundle, so it is in the strip on the next refresh. One episode at a time; the pr
 | `robojev/` | the package: plan executor, scripted expert, state text, questions, composer, parser, grounding |
 | `robojev/envs/` | the environment protocol and the LIBERO adapter (the only simulator import) |
 | `robojev/policy.py` | the in-process policy: scripted expert, local checkpoint, or the hosted Jev |
-| `robojev/cli.py` | `run`, `record`, `console`, `harvest`, `dagger`, `train` |
+| `robojev/cli.py` | `run`, `record`, `catalogue`, `scene`, `console`, `harvest`, `dagger`, `train` |
+| `robojev/scene_bundle.py`, `robojev/catalogue.py` | robopp's scene export and task catalogue, ported |
+| `showcase/` | the four runs GitHub carries, their scenes and their tasks' catalogue entries |
 | `robojev/console/` | the local server: the protocol, RFC 6455, the PNG encoder, one live episode |
-| `web/`, `tools/` | the front end and the scripts that serve and check it |
+| `web/`, `tools/` | the front end (robopp's components and styles) and the scripts that serve and check it |
 | `docs/DESIGN.md` | why it is shaped this way, and every measurement |
 
 ## How it works
@@ -85,6 +100,5 @@ Details and the failures that shaped each of those steps: [docs/DESIGN.md](docs/
   `--policy model` needs an environment where both extras install (a 3.12 venv with
   `robojev[libero,model]`), which is untested. The console refuses a policy this interpreter
   cannot serve rather than failing mid-episode.
-- The console's live view is the two camera renders and not a 3D scene: a pose stream and a
-  WebGL viewer would be a second renderer to keep honest, and what the policy reads is the text
-  beside the pictures rather than either of them.
+- The 3D view needs WebGL and the network (the MuJoCo WASM comes from jsDelivr); without either,
+  the videos, the bars and the plot still work.

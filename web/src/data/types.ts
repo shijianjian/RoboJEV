@@ -122,9 +122,20 @@ export interface Episode {
   recorded_at: string;
   wall_seconds: number;
   media: Partial<Record<"agentview" | "wrist", MediaTrack>>;
-  /** The still inside the bundle that the strip shows and the `<video>` uses as its poster. */
+  /** The still inside the bundle, for the `<video>` poster. */
   poster?: string | null;
+  /** The simulator's joint positions, one little-endian float32 row per video frame (schema 2). */
+  qpos?: QposTable | null;
+  /** The 3D scene those rows pose: `../scenes/<hash>/scene.xml` beside the bundles (schema 2). */
+  scene?: { hash: string; nq: number } | null;
   decisions: Decision[];
+}
+
+export interface QposTable {
+  path: string;
+  frames: number;
+  nq: number;
+  dtype?: string;
 }
 
 /** One row of `replays/index.json`: enough to draw a strip item without loading the episode. */
@@ -139,5 +150,24 @@ export interface EpisodeIndexEntry {
   task_index: number;
   init_state_index: number;
   suite: string;
+  /** The engine that answered (`robojev`, `expert`, …); absent in an index written before it. */
+  policy?: string;
   poster?: string | null;
+}
+
+/** One task of the catalogue (`catalogue/index.json`, robopp's `task.json`). */
+export interface CatalogueTask {
+  suite: string;
+  task_index: number;
+  name: string;
+  instruction: string;
+  scene_bundle: string | null;
+  n_init_states: number;
+  max_steps: number;
+  thumbnail?: string | null;
+}
+
+export interface CatalogueSuite {
+  suite: string;
+  tasks: CatalogueTask[];
 }

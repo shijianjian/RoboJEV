@@ -41,10 +41,22 @@ export interface StartSpec {
   policy: string;
   selection: string;
   temperature?: number | null;
+  checkpoint?: string | null;
+}
+
+/** One set of weights the page offers: choosing it starts with its `policy` and `checkpoint`. */
+export interface LiveWeights {
+  id: string;
+  label: string;
+  revision: string | null;
+  policy: string;
+  checkpoint: string | null;
 }
 
 /** What this console can be asked for, sent once on connect. */
 export interface LiveConfig {
+  /** Absent from a console older than the weights picker: the page then offers its engines. */
+  weights?: LiveWeights[];
   protocol: number;
   policies: string[];
   suites: string[];
@@ -99,6 +111,20 @@ export interface LiveSaved {
   success: boolean;
 }
 
+/** Where the live episode's 3D scene loads from (`hello.scene`). */
+export interface LiveSceneRef {
+  hash: string;
+  xml: string;
+  assets: string;
+  nq: number | null;
+}
+
+/** The simulator's joint positions at one control step (`pose`). */
+export interface LivePose {
+  step: number;
+  qpos: number[];
+}
+
 export interface LiveState {
   connection: Connection;
   run: RunState;
@@ -119,12 +145,16 @@ export interface LiveState {
   done: LiveDone | null;
   saved: LiveSaved | null;
   tasks: LiveTask[] | null;
+  /** The 3D scene of the episode in hand, or null (none exported, or a console without scenes). */
+  scene: LiveSceneRef | null;
+  /** The newest pose the console sent, for the 3D scene. */
+  pose: LivePose | null;
 }
 
 export const EMPTY_LIVE: LiveState = {
   connection: "connecting", run: "idle", episode: false, header: null, video: null, config: null,
   decisions: [], step: null, overrides: {}, message: null, error: null, fatal: false, done: null,
-  saved: null, tasks: null,
+  saved: null, tasks: null, scene: null, pose: null,
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -171,7 +201,16 @@ export function applyMessage(state: LiveState, raw: unknown): LiveState {
         error: null,
         message: null,
         overrides: {},
+        scene: sceneRef(raw.scene),
+        pose: null,
       };
+    }
+    case "pose": {
+      if (typeof raw.step !== "number" || !Array.isArray(raw.qpos)
+          || !raw.qpos.every((v) => typeof v === "number" && Number.isFinite(v))) return state;
+      // A pose older than the one on screen is a late message, not a step back in time.
+      if (state.pose !== null && raw.step < state.pose.step) return state;
+      return { ...state, pose: { step: raw.step, qpos: raw.qpos as number[] } };
     }
     case "decision": {
       const decision = raw.decision as Decision | undefined;
@@ -206,6 +245,13 @@ export function applyMessage(state: LiveState, raw: unknown): LiveState {
     default:
       return state;
   }
+}
+
+function sceneRef(raw: unknown): LiveSceneRef | null {
+  if (!isRecord(raw) || typeof raw.hash !== "string" || typeof raw.xml !== "string"
+      || typeof raw.assets !== "string") return null;
+  return { hash: raw.hash, xml: raw.xml, assets: raw.assets,
+           nq: typeof raw.nq === "number" ? raw.nq : null };
 }
 
 /**
@@ -298,7 +344,7 @@ export function sessionLine(state: LiveState): string {
   if (state.connection !== "open") return "connecting to the console…";
   switch (state.run) {
     case "idle":
-      return "no episode · pick a scene and a policy, then start one";
+      return "no episode · pick a task and weights, then Start";
     case "starting":
       return state.message ?? "starting · building the simulator and the policy";
     case "waiting":

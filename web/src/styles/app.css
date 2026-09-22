@@ -1,0 +1,67 @@
+/* ---------------------------------------------------------------------------
+   What this app adds to robopp's stylesheet (`robopp.css`), in robopp's tokens.
+   --------------------------------------------------------------------------- */
+
+/* The app's grid is robopp's `.run-tab` with its rail column taken out: the rail's runs are the
+   sidebar's second tab. The replay page spans both of the columns right of the sidebar. */
+.run-tab__main { min-width: 0; }
+@media (min-width: 1000px) {
+  .run-tab__main { grid-column: 2 / -1; grid-row: 1; }
+}
+@media (min-width: 1500px) {
+  .run-tab--app { grid-template-columns: 280px minmax(0, 1fr) 380px; }
+}
+
+/* The sidebar's two tabs: robopp's stage-tab strip, flush with the sidebar's own edge. */
+.app-side { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; }
+.app-side__tabs { padding: 0; margin-bottom: var(--s-1); }
+.app-side__tabs .stage-tab__label { text-decoration: none; font-size: var(--fs-md); }
+/* One run per row, as robopp's rail lays them out at its narrowest. */
+.app-side__runs.run-cells { grid-template-columns: minmax(0, 1fr); padding: 0; border-top: 0; }
+
+
+
+/* ---------------------------------------------------------------- the Dataset (inference) page */
+/* The Runs page's layout, a narrow list of the task's runs on the right, and the controls as one
+   bar docked along the bottom. */
+@media (min-width: 1000px) {
+  .run-tab--dataset .run-tab__main { grid-column: 2; grid-row: 1; }
+  .run-tab--dataset .run-tab__panel { grid-column: 2; grid-row: 2; }
+  .run-tab--dataset .rj-dock { grid-column: 2; grid-row: 3; }
+}
+@media (min-width: 1200px) {
+  .run-tab--app.run-tab--dataset { grid-template-columns: 280px minmax(0, 1fr) 220px; }
+  .run-tab--dataset .run-tab__panel { grid-column: 3; grid-row: 1; }
+  .run-tab--dataset .rj-dock { grid-column: 2 / -1; grid-row: 2; }
+}
+.rj-liveframe { display: block; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: contain; background: var(--bg-canvas); }
+.rj-taskruns { min-width: 0; }
+.rj-taskruns .sidenav__heading { padding: 0; margin-top: 0; }
+.rj-taskruns__empty { font-size: var(--fs-sm); margin: var(--s-2) 0 0; }
+.rj-taskruns__list { list-style: none; margin: var(--s-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.rj-taskrun {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr); grid-template-rows: auto auto; gap: 2px var(--s-2);
+  align-items: center; padding: 6px; border: 1px solid var(--line); border-radius: var(--r-2);
+  background: var(--bg-1); color: var(--text-1); text-decoration: none; font-size: var(--fs-sm);
+}
+.rj-taskrun:hover { border-color: var(--line-bright); color: var(--text-1); }
+.rj-taskrun .replay-task__thumb { grid-row: 1 / span 2; }
+.rj-taskrun__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rj-taskrun .chip { justify-self: start; }
+.rj-dock {
+  position: sticky; bottom: var(--s-3); z-index: 30; padding: var(--s-2) var(--s-3);
+  background: color-mix(in srgb, var(--bg-1) 94%, transparent); backdrop-filter: blur(10px);
+  border-color: var(--line-bright); box-shadow: var(--shadow-3);
+}
+.rj-dock__row { display: flex; align-items: flex-end; gap: var(--s-3); flex-wrap: wrap; }
+.rj-dock__row .field select { min-width: 0; }
+.rj-dock__row [data-testid="session-weights"] { min-width: 220px; }
+.rj-dock__row .session-toggle { align-self: center; }
+.rj-dock__buttons { display: flex; gap: var(--s-1); flex-wrap: wrap; }
+.rj-dock__row > .chip { margin-left: auto; align-self: center; }
+.rj-dock__line { margin: var(--s-1) 0 0; }
+
+/* The link to the source: an icon button at the header's right end. */
+.app-header__github { display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); }
+.app-header__github svg { width: 18px; height: 18px; }
+.rj-dock__row > .rj-disconnected { margin-left: auto; align-self: center; cursor: pointer; font: inherit; font-size: var(--fs-xs); }

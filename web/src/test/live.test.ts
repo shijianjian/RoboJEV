@@ -105,6 +105,24 @@ describe("applyMessage", () => {
     expect(second.episode).toBe(true);
   });
 
+  it("names the episode's 3D scene on hello and follows its pose, never backwards", () => {
+    const SCENE = { hash: "abc", xml: "http://127.0.0.1:8765/scenes/abc/scene.xml",
+                    assets: "http://127.0.0.1:8765/scenes/assets/", nq: 3 };
+    const opened = fold([CONFIG, { type: "hello", episode: HEADER, video: VIDEO, scene: SCENE }]);
+    expect(opened.scene).toEqual(SCENE);
+    expect(opened.pose).toBeNull();
+    const posed = fold([{ type: "pose", step: 12, qpos: [1, 2, 3] },
+                        { type: "pose", step: 11, qpos: [9, 9, 9] }], opened);
+    expect(posed.pose).toEqual({ step: 12, qpos: [1, 2, 3] });
+    // A pose that is not numbers is dropped, not drawn.
+    expect(applyMessage(posed, { type: "pose", step: 13, qpos: [1, null, 3] })).toBe(posed);
+    // A console that exports no scene says null, and an old one says nothing at all.
+    expect(fold([CONFIG, { type: "hello", episode: HEADER, video: VIDEO, scene: null }]).scene).toBeNull();
+    expect(fold([CONFIG, { type: "hello", episode: HEADER, video: VIDEO }]).scene).toBeNull();
+    // A new episode starts with no pose from the previous one.
+    expect(applyMessage(posed, { type: "hello", episode: HEADER, video: VIDEO, scene: SCENE }).pose).toBeNull();
+  });
+
   it("places a decision by its index, so a replayed one is not drawn twice", () => {
     const state = fold([{ type: "decision", decision: decision(0) },
                         { type: "decision", decision: decision(1) },
@@ -223,7 +241,7 @@ describe("the strip item and the controls", () => {
 
   it("says where the session is in one line", () => {
     expect(sessionLine(EMPTY_LIVE)).toContain("connecting");
-    expect(sessionLine(fold([CONFIG]))).toContain("pick a scene");
+    expect(sessionLine(fold([CONFIG]))).toContain("pick a task");
     expect(sessionLine(fold([CONFIG, { type: "status", state: "running", step: 85, episode: true },
                              { type: "hello", episode: HEADER, video: VIDEO },
                              { type: "status", state: "running", step: 85, episode: true }])))

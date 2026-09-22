@@ -1,9 +1,10 @@
 name: pages
 
 # The replay front end, built and published to GitHub Pages. It is a static site with no backend:
-# the episode bundles in `web/public/replays/` ship with it, and `vite.config.ts` sets
-# `base: "./"`, so every asset is referenced relative to the page and a project site under
-# `/RoboJEV/` works without any path configuration here.
+# `npm run build:pages` publishes the runs `web/showcase.json` selects (and the scene files those
+# runs use) from `showcase/`, and nothing else, and builds the app without its Dataset
+# tab (`VITE_SITE=pages`); `vite.config.ts` sets `base: "./"`,
+# so a project site under `/RoboJEV/` works without any path configuration here.
 
 on:
   push:
@@ -33,7 +34,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - run: npm run build
+      # The Pages build: the showcase runs only, and no Dataset tab (it needs a local console).
+      - run: npm run build:pages
         working-directory: web
       - uses: actions/upload-pages-artifact@v3
         with:

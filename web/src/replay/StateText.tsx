@@ -20,13 +20,13 @@ export function StateText({ state, hot, onHot }: {
 }) {
   const lines: StateLine[] = parseStateText(state);
   return (
-    <pre className="statetext" data-testid="state-text">
+    <pre className="rj-statetext" data-testid="state-text">
       {lines.map((line) => {
         const lit = hot !== null && line.qids.includes(hot);
         return (
           <span
             key={line.index}
-            className={`statetext__line${lit ? " statetext__line--hot" : ""}`}
+            className={`rj-statetext__line${lit ? " rj-statetext__line--hot" : ""}`}
             data-testid={`state-line-${line.index}`}
             data-kind={line.kind}
             data-qids={line.qids.join(" ")}

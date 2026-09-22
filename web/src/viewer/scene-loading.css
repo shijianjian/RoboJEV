@@ -1,0 +1,85 @@
+/* What a scene view shows while the *next* bundle is being fetched and compiled.
+ *
+ * Compiling a LIBERO scene blocks the main thread for seconds, so the viewer keeps the scene
+ * already on the canvas up rather than blanking it — which leaves the canvas ambiguous (what you
+ * are looking at is the previous task), and these rules are what resolve it.
+ *
+ * The constraint that shapes all of it: while MuJoCo WASM compiles, JavaScript cannot run at
+ * all. Nothing driven by a timer, a rAF callback or a React re-render can move during that
+ * window. A CSS `@keyframes` animation on `transform`, on its own element, is handed to the
+ * compositor and keeps running on its thread while the main thread is stuck — so the sweep below
+ * is the one thing on the page that can honestly say "still working".
+ *
+ * Its own file, imported by the viewer, rather than more rules in globals.css. */
+
+.scene-stage {
+  position: relative;
+  min-width: 0;
+  display: grid;
+}
+
+/* The line sits on the stage's top edge, over the canvas border. */
+.scene-progress {
+  position: absolute;
+  inset: 0 0 auto 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scene-progress__track {
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--r-3, 10px) var(--r-3, 10px) 0 0;
+  background: color-mix(in srgb, var(--accent, #f5b301) 14%, transparent);
+}
+
+.scene-progress__sweep {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent, #f5b301) 55%, transparent) 35%,
+    var(--accent-2, #ffcc45) 50%,
+    color-mix(in srgb, var(--accent, #f5b301) 55%, transparent) 65%,
+    transparent 100%
+  );
+  /* Its own compositor layer, so the sweep survives a blocked main thread. */
+  will-change: transform;
+  transform: translateX(-100%);
+  animation: scene-progress-sweep 1200ms linear infinite;
+}
+
+@keyframes scene-progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+/* The count beside the line: how far the fetch got before the compile took the thread. It stops
+   updating once compiling starts, which is exactly what it should say. */
+.scene-progress__note {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #222c3c);
+  background: color-mix(in srgb, var(--bg-1, #10151f) 86%, transparent);
+  color: var(--text-3, #7f8b9e);
+  font-size: var(--fs-xs, 12px);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* A bar sweeping forever is the thing this setting is about. The line stays — it is the only
+   indication that the stale scene on the canvas is stale — but it stops moving, and the note
+   beside it still says what is happening in words. */
+@media (prefers-reduced-motion: reduce) {
+  .scene-progress__sweep {
+    animation: none;
+    transform: none;
+    background: color-mix(in srgb, var(--accent, #f5b301) 45%, transparent);
+  }
+}

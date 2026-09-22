@@ -23,9 +23,9 @@ function Fact({ label, children, title, testId }: {
   testId?: string;
 }) {
   return (
-    <span className="fact" title={title} data-testid={testId}>
-      <span className="fact__label">{label}</span>
-      <span className="fact__value num">{children}</span>
+    <span className="rj-fact" title={title} data-testid={testId}>
+      <span className="rj-fact__label">{label}</span>
+      <span className="rj-fact__value u-num">{children}</span>
     </span>
   );
 }
@@ -39,7 +39,7 @@ export function Details({ episode, decision, grounding }: {
   const g = grounding?.grounding ?? null;
   const rim = decision !== null && RIM_STAGES.has(decision.subgoal ?? "") ? decision.rim_chosen : null;
   return (
-    <div className="details" data-testid="details">
+    <div className="rj-details" data-testid="details">
       {decision?.waypoint_cm != null && (
         <Fact label="waypoint" title={decision.waypoint ?? undefined} testId="fact-waypoint">
           x {fmtCm(decision.waypoint_cm[0])} y {fmtCm(decision.waypoint_cm[1])} z {fmtCm(decision.waypoint_cm[2])} cm
@@ -52,7 +52,7 @@ export function Details({ episode, decision, grounding }: {
           testId="fact-rim"
         >
           {rim.letter} {rim.side} · {rim.turn_deg}° · {fmtRoom(rim.room_cm)}
-          {!rim.fits && <span className="fact__bad"> blocked</span>}
+          {!rim.fits && <span className="rj-fact__bad"> blocked</span>}
         </Fact>
       )}
       {g !== null && (
@@ -61,13 +61,13 @@ export function Details({ episode, decision, grounding }: {
           title={`the text rule answered ${g.target} → ${g.destination}; the model's own pick was ${g.model?.target} → ${g.model?.destination}`}
           testId="fact-grounding"
         >
-          {g.target} <span className="dim">→</span> {g.destination}
-          <span className="dim"> {g.source}</span>
+          {g.target} <span className="u-dim">→</span> {g.destination}
+          <span className="u-dim"> {g.source}</span>
           {/* Only when there *is* a model opinion to compare against. The scripted expert runs no
               grounding forward, so `model_agrees` is null on its episodes — and drawing that as a
               disagreement would be the page inventing a second answer nobody ever gave. */}
           {g.model_agrees !== null && (
-            <span className={g.model_agrees ? "fact__ok" : "fact__bad"}>
+            <span className={g.model_agrees ? "rj-fact__ok" : "rj-fact__bad"}>
               {g.model_agrees ? " model agrees" : ` model: ${g.model?.target ?? "?"}`}
             </span>
           )}

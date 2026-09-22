@@ -52,7 +52,11 @@ pickers.
                "selection": "argmax", "checkpoint": null, "seed": 7, "max_steps": null },
   "video": { … },                             // see `hello`
   "state": "idle",
-  "replays": "replays/"
+  "replays": "replays/",
+  "weights": [                                // what the page offers: checkpoints, not engines
+    { "id": "model:/…/checkpoints/robojev/libero_spatial", "label": "robojev/libero_spatial",
+      "revision": "bb7ba09784d7", "policy": "model", "checkpoint": "/…/checkpoints/robojev/libero_spatial" }
+  ]
 }
 ```
 
@@ -98,12 +102,29 @@ episode is over (`success`, `terminated_by`, `steps`, `media`, `poster`, `record
 }
 ```
 
+`hello` also carries `"scene"`: where the page loads the episode's 3D scene from (robopp's compiled
+bundle, by hash), or `null` when the environment exported none.
+
+```jsonc
+"scene": { "hash": "df35d37f…", "nq": 48,
+           "xml": "http://127.0.0.1:8765/scenes/df35d37f…/scene.xml",
+           "assets": "http://127.0.0.1:8765/scenes/df35d37f…/assets/" }
+```
+
 **The clock is the one thing that changes.** In a replay, `decision.t` is a position in a finished
 video and the video drives the panel. Live there is nothing to seek: the newest decision is the
-current one, `t` is still `control_step / control_rate` (so a live episode saved as a bundle needs
-no fixing up), and the scrubber becomes a history of what has already happened rather than a
-control over what is shown. Scrubbing back stops the panel following; the transport's ⤓ puts it
-back on the newest.
+current one, and `t` is still `control_step / control_rate`, so a live episode saved as a bundle
+needs no fixing up.
+
+### `pose` — once per control step
+
+```jsonc
+{ "type": "pose", "step": 85, "qpos": [0.01234, -0.18055, …] }   // model.nq numbers, 5 decimals
+```
+
+The simulator's joint positions after that step: what the 3D scene is posed with. It is the same
+row a saved bundle writes into `qpos.bin` for that frame. ~400 bytes at 20 Hz; the page keeps the
+newest and drops one older than what it already has.
 
 ### `decision` — one per decision point, as it is made
 
@@ -150,13 +171,14 @@ episode the operator reset is let go of at once, because the next thing they do 
 ### `saved` — a live episode written out as a bundle
 
 ```jsonc
-{ "type": "saved", "id": "live-2026-09-22T09-14-03", "path": "/…/web/public/replays/live-…",
+{ "type": "saved", "id": "live-2026-09-22T09-14-03", "path": "/…/runs/live-…",
   "url": "replays/live-…/", "decisions": 29, "bytes": 1840112, "success": true }
 ```
 
-The directory `robojev record` would have written, `index.json` rewritten around it. The console
-serves `/replays/` out of that directory in front of the built app's copy, so a saved episode is in
-the strip after a refresh rather than after a rebuild.
+The directory `robojev record` would have written, `index.json` rewritten around it and the scene
+copied into `replays/scenes/`. The console serves `/replays/` out of that directory in front of the
+built app's copy, and the page reads the index again on `saved`, so the episode is in Recent runs at
+once rather than after a rebuild.
 
 ### `error`
 
@@ -217,6 +239,8 @@ The same port serves the rest, so `robojev console` alone opens a working page:
 | `/` and `/assets/…` | `web/dist`, with `window.__ROBOJEV_CONSOLE__` injected into the page |
 | `/replays/…` | the replays directory first, the built app's copy second; byte ranges, because a browser seeking an mp4 asks for one |
 | `/frame/<camera>.png` | the latest render, encoded on demand and cached by frame; `204` while nothing has been rendered |
+| `/scenes/<hash>/…` | compiled scenes: `showcase/scenes`, `data/scenes`, `$ROBOJEV_HOME/scenes`, then the live episode's export (`--scenes-dir`) |
+| `/catalogue/…` | the task catalogue from `showcase/`, `data/`, `$ROBOJEV_HOME`; `/catalogue/index.json` lists it |
 | `/ws` | the above |
 
 ## What is deliberately not here
@@ -225,3 +249,22 @@ No authentication, no TLS, no `0.0.0.0`: this is a local tool, and the page neve
 anything the server must trust. No WebRTC — one picture at a time is enough for a 20 Hz 256-square
 render on loopback, and it costs the page an `<img>` and the server nothing. No second episode: one
 console, one simulator.
+
+## The bundle, version 2
+
+A bundle is `recorder.py`'s directory: `episode.json`, `agentview.mp4`, `wrist.mp4`, `poster.jpg`,
+and since `schema_version: 2`
+
+```jsonc
+"qpos":  { "path": "qpos.bin", "frames": 155, "nq": 48, "dtype": "<f4" },  // frames x nq, row-major
+"scene": { "hash": "73d6392e…", "nq": 48 }
+```
+
+`qpos.bin` holds one row per video frame, so the 3D scene and the videos are one clock. The scene is
+robopp's compiled bundle `scenes/<hash>/` (`scene.xml` and `assets/`; `robojev/scene_bundle.py` is
+robopp's export, ported), the same hash the task's catalogue entry names. The page reads version 1
+as well; such a bundle replays on its videos alone.
+`robojev scene <bundle>` upgrades one by replaying its recorded actions in the simulator and
+refusing unless the replay reproduces the recording (outcome, steps, frames, and every agentview
+frame within a few grey levels of the video).
+
